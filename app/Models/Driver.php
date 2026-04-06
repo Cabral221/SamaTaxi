@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class Driver extends Model
@@ -18,4 +19,9 @@ class Driver extends Model
     protected $casts = [
         // 'current_location' => 'string',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
