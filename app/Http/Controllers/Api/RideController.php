@@ -25,50 +25,62 @@ class RideController extends Controller
             ], 403);
         }
 
-        // 1. Calcul du prix
-        $price = RideService::estimatePrice($validated['distance_km']);
+        // 1. Calcul du prix (notre service de hier)
+        $price = RideService::estimatePrice($request->distance_km);
 
-        // 2. Recherche du chauffeur le plus proche avec PostGIS
-        // On cherche un chauffeur "available" à proximité des coordonnées reçues
-        $point = "POINT(" . $validated['lng'] . " " . $validated['lat'] . ")";
+        // 2. Recherche des 5 chauffeurs les plus proches via PostGIS
+        // On prépare le point WKT (Well-Known Text) proprement
+        $pointWkt = "POINT({$request->lng} {$request->lat})";
 
-        $nearestDriver = Driver::where('status', 'available')
-            ->select('full_name', 'phone_number')
+        // On utilise ST_DistanceSphere pour obtenir la distance en mètres
+        $nearbyDrivers = Driver::where('status', 'available')
+            ->select('id', 'full_name', 'phone_number', 'status', 'user_id')
+            // On utilise ST_AsText pour éviter le bug de sérialisation binaire
+            ->selectRaw("ST_AsText(current_location) as location_text")
             ->selectRaw(
-                "ST_Distance(current_location, ST_GeomFromText(?, 4326)::geography) as distance_to_client",
-                [$point]
+                "ST_Distance(current_location, ST_GeographyFromText(?)) as distance_m",
+                ["SRID=4326;$pointWkt"]
             )
-            ->orderBy('distance_to_client')
-            ->first();
+            ->orderBy('distance_m')
+            ->limit(5)
+            ->get();
 
         return response()->json([
             'success' => true,
-            'estimate' => [
+            'estimation' => [
                 'price' => $price,
-                'currency' => 'FCFA',
-                'distance_trip' => $validated['distance_km'] . ' km'
+                'currency' => 'XOF',
+                'distance_trip_km' => $request->distance_km
             ],
-            'nearest_driver' => $nearestDriver ? [
-                'name' => $nearestDriver->full_name,
-                'distance_away' => round($nearestDriver->distance_to_client / 1000, 2) . ' km'
-            ] : 'Aucun chauffeur disponible'
+            'available_drivers' => $nearbyDrivers
         ]);
     }
 
-    public function updateLocation(Request $request, $id)
+    public function updateLocation(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
         ]);
 
-        $driver = Driver::findOrFail($id);
+        // 1. On récupère l'utilisateur connecté via le Token
+        $user = $request->user();
 
-        // On met à jour la position en SQL brut pour PostGIS
+        // 2. On vérifie que cet utilisateur est bien un chauffeur
+        $driver = $user->driver;
+
+        if (!$driver) {
+            return response()->json(['message' => 'Accès refusé. Vous n\'êtes pas un chauffeur.'], 403);
+        }
+
+        // 3. Mise à jour de SA position uniquement
         $driver->update([
-            'current_location' => DB::raw("ST_GeomFromText('POINT({$validated['lng']} {$validated['lat']})', 4326)")
+            'current_location' => DB::raw("ST_GeomFromText('POINT({$request->lng} {$request->lat})', 4326)")
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Position mise à jour']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Position de ' . $driver->full_name . ' mise à jour avec succès.'
+        ]);
     }
 }

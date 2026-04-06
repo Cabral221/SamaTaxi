@@ -1,13 +1,24 @@
 <?php
 
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\RideController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Cette route sera accessible via http://127.0.0.1:8000/api/estimate
+// --- Routes Publiques (Accessibles sans connexion) ---
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
 Route::post('/estimate', [RideController::class, 'estimate']);
-Route::patch('/driver/{id}/location', [RideController::class, 'updateLocation']);
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+// --- Routes Protégées (Nécessitent un Token) ---
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Un chauffeur met à jour sa position
+    Route::post('/driver/location', [RideController::class, 'updateLocation']);
+
+    // Route pour vérifier si le token est toujours valide
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+});

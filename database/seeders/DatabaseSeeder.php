@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Driver;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,11 +16,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // On crée un compte Admin spécifique pour toi tester
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            'name' => 'Admin SamaTaxi',
+            'email' => 'admin@samataxi.sn',
+            'password' => bcrypt('pass123'),
         ]);
+
+        // On crée 50 chauffeurs (ce qui créera aussi 50 utilisateurs automatiquement)
+        Driver::factory(50)->create();
+
     }
 }
