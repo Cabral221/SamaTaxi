@@ -2,20 +2,49 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 // CONFIGURATION GLOBALE D'AXIOS
-const token = window.authToken || localStorage.getItem('token');
-if (token) {
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-}
-axios.defaults.headers.common['Accept'] = 'application/json';
+axios.interceptors.request.use(config => {
+    const token = window.authToken || localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    config.headers.Accept = 'application/json';
+    return config;
+});
 
 function Radar() {
     const [newRides, setNewRides] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [coords, setCoords] = useState(null);
 
     // Coordonnées de test (Dakar Plateau)
-    const testLocation = { lat: 14.6681, lng: -17.4344 };
+    // const testLocation = { lat: 14.6681, lng: -17.4344 };
 
     useEffect(() => {
+        // --- A. GEOLOCALISATION ---
+        if (!navigator.geolocation) {
+            alert("La géolocalisation n'est pas supportée par votre navigateur");
+            return;
+        }
+
+        // On suit la position en temps réel
+        const watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                const newPos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                setCoords(newPos);
+                // Optionnel : Envoyer la position au backend pour que les clients voient le chauffeur
+                // On informe le serveur pour le tracking passager
+                axios.post('/api/driver/location', newPos).catch(e => console.log("DB Update failed"));
+            },
+            (error) => console.error("Erreur GPS:", error),
+            { enableHighAccuracy: true }
+        );
+
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, []);
+
+    useEffect(() => {
+        if (!coords) return; // On attend d'avoir les coordonnées avant de charger les courses
+
         // --- 1. CHARGEMENT INITIAL (Les courses déjà en attente) ---
         const fetchExistingRides = async () => {
             try {
@@ -23,7 +52,7 @@ function Radar() {
                 const token = window.authToken || localStorage.getItem('token');
 
                 const response = await axios.get('/api/drivers/available-rides', {
-                    params: testLocation,
+                    params: coords,
                     headers: {
                         'Authorization': `Bearer ${token}`, // Ajout du token ici
                         'Accept': 'application/json'
@@ -31,6 +60,7 @@ function Radar() {
                 });
 
                 if (response.data.success) {
+                    console.log(`📍 Position: ${coords.lat}, ${coords.lng} | 🚕 Courses trouvées:`, response.data.available_rides.length);
                     setNewRides(response.data.available_rides);
                 }
             } catch (error) {
@@ -50,7 +80,6 @@ function Radar() {
             console.log("🔔 WebSocket : Nouvelle course !", e);
             setNewRides((prev) => [e.ride, ...prev]);
         });
-
         // Course acceptée par quelqu'un d'autre
         channel.listen('.ride.accepted', (e) => {
             console.log("🔕 WebSocket : Course acceptée par un collègue", e);
@@ -58,7 +87,7 @@ function Radar() {
         });
 
         return () => window.Echo.leave('available-rides');
-    }, []);
+    }, [coords]); // On recharge si la position change significativement
 
     // Action pour accepter une course
     const handleAccept = async (rideId) => {
@@ -80,7 +109,8 @@ function Radar() {
         }
     };
 
-    if (loading) return <div>Chargement du radar...</div>;
+    if (!coords) return <div>Activation du GPS SamaTaxi...</div>;
+    if (loading) return <div>Recherche des clients à proximité...</div>;
 
     return (
         <div style={{ padding: '20px', background: '#f0f0f0', borderRadius: '8px' }}>
