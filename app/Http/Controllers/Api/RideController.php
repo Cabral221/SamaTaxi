@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\RideAccepted;
 use App\Events\RideRequested;
 use App\Http\Controllers\Controller;
 use App\Models\Driver;
@@ -111,6 +112,9 @@ class RideController extends Controller
 
         // On recharge le modèle pour avoir les relations (passenger, user)
         $ride = Ride::with('passenger.user')->find($id);
+
+        // Émettre un événement pour supprimer la course des listes de tous les autres chauffeurs connectés
+        event(new RideAccepted($ride));
 
         return response()->json([
             'success' => true,
