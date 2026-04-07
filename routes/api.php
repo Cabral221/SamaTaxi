@@ -24,6 +24,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Route pour vérifier si le token est toujours valide
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        $user = $request->user();
+        // On charge explicitement les relations pour être sûr
+        $isDriver = $user->driver()->exists();
+        $isPassenger = $user->passenger()->exists();
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $isDriver ? 'driver' : ($isPassenger ? 'passenger' : null),
+        ]);
     });
 });

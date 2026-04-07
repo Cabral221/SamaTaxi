@@ -1,16 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-// CONFIGURATION GLOBALE D'AXIOS
-axios.interceptors.request.use(config => {
-    const token = window.authToken || localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    config.headers.Accept = 'application/json';
-    return config;
-});
-
 function Radar() {
     const [newRides, setNewRides] = useState([]);
     const [loading, setLoading] = useState(true);
