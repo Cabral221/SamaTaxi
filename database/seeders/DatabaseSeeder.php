@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Driver;
+use App\Models\Passenger;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -25,6 +26,21 @@ class DatabaseSeeder extends Seeder
 
         // On crée 50 chauffeurs (ce qui créera aussi 50 utilisateurs automatiquement)
         Driver::factory(50)->create();
+
+        // On crée 100 passagers (ce qui créera aussi 100 users automatiquement)
+        Passenger::factory(100)->create();
+
+        // Optionnel : Créer un utilisateur spécifique pour tes tests manuels
+        $testUser = User::factory()->create([
+            'name' => 'Client Test',
+            'email' => 'client@samataxi.sn',
+            'password' => bcrypt('password'),
+        ]);
+
+        Passenger::create([
+            'user_id' => $testUser->id,
+            'phone_number' => '+221770000000',
+        ]);
 
     }
 }

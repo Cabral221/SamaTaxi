@@ -4,12 +4,51 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Driver;
+use App\Models\Ride;
 use App\Services\RideService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class RideController extends Controller
 {
+
+    public function store(Request $request)
+    {
+        // On récupère le profil passager de l'utilisateur connecté
+        $passenger = auth()->user()->passenger;
+
+        if (!$passenger) {
+            return response()->json(['message' => 'Profil passager introuvable'], 403);
+        }
+
+        // 1. Validation des données entrantes
+        $validated = $request->validate([
+            'pickup_lat' => 'required|numeric',
+            'pickup_lng' => 'required|numeric',
+            'destination_lat' => 'required|numeric',
+            'destination_lng' => 'required|numeric',
+            'price' => 'required|numeric',
+            'distance_km' => 'required|numeric',
+        ]);
+
+        // 2. Création de la course
+        $ride = Ride::create([
+            'passenger_id' => $passenger->id,
+            'pickup_location' => DB::raw("ST_GeomFromText('POINT({$validated['pickup_lng']} {$validated['pickup_lat']})', 4326)"),
+            'destination_location' => DB::raw("ST_GeomFromText('POINT({$validated['destination_lng']} {$validated['destination_lat']})', 4326)"),
+            'estimated_price' => $validated['price'],
+            'distance_km' => $validated['distance_km'],
+            'status' => 'pending', // Statut initial : En attente
+        ]);
+
+        // 3. Retourner la réponse au Frontend
+        return response()->json([
+            'success' => true,
+            'message' => 'Demande de course envoyée !',
+            'ride' => $ride
+        ], 201);
+    }
+
     public function estimate(Request $request)
     {
         $validated = $request->validate([

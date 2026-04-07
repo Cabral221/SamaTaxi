@@ -14,8 +14,11 @@ Route::post('/estimate', [RideController::class, 'estimate']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Un chauffeur met à jour sa position
+    // Route pour un chauffeur met à jour sa position
     Route::post('/driver/location', [RideController::class, 'updateLocation']);
+
+    // Route pour créer une course
+    Route::post('/rides', [RideController::class, 'store']);
 
     // Route pour vérifier si le token est toujours valide
     Route::get('/user', function (Request $request) {

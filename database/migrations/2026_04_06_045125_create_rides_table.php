@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('rides', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('client_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('passenger_id')->constrained('passengers')->onDelete('cascade');
             $table->foreignId('driver_id')->nullable()->constrained('drivers')->onDelete('set null');
 
             // Statuts : requested, accepted, ongoing, completed, cancelled
@@ -22,6 +22,7 @@ return new class extends Migration
             // Géographie PostGIS pour l'origine et la destination
             $table->geography('pickup_location', 'point', 4326);
             $table->geography('destination_location', 'point', 4326);
+            $table->decimal('distance_km', 8, 2)->nullable();
 
             $table->decimal('estimated_price', 10, 2);
             $table->decimal('final_price', 10, 2)->nullable();
