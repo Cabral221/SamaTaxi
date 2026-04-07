@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\RideRequested;
 use App\Http\Controllers\Controller;
 use App\Models\Driver;
 use App\Models\Ride;
@@ -41,7 +42,10 @@ class RideController extends Controller
             'status' => 'requested', // Statut initial : En attente
         ]);
 
-        // 3. Retourner la réponse au Frontend
+        // 3. Émettre un événement pour notifier les chauffeurs disponibles
+        event(new RideRequested($ride));
+
+        // 4. Retourner la réponse au Frontend
         return response()->json([
             'success' => true,
             'message' => 'Demande de course envoyée !',
