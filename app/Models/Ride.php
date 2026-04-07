@@ -10,11 +10,13 @@ class Ride extends Model
     protected $fillable = [
         'passenger_id',
         'driver_id',
+        'status',
         'pickup_location',
         'destination_location',
-        'price',
+        'estimated_price', // <--- Vérifie que c'est bien écrit comme ça
         'distance_km',
-        'status'
+        'started_at',
+        'completed_at'
     ];
 
     public function passenger()

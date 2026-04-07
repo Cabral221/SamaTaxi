@@ -14,8 +14,10 @@ Route::post('/estimate', [RideController::class, 'estimate']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Route pour un chauffeur met à jour sa position
+    // Routes spécifiques aux chauffeurs*
     Route::post('/driver/location', [RideController::class, 'updateLocation']);
+    Route::get('/drivers/available-rides', [RideController::class, 'availableRides']);
+    Route::post('/rides/{id}/accept', [RideController::class, 'acceptRide']);
 
     // Route pour créer une course
     Route::post('/rides', [RideController::class, 'store']);

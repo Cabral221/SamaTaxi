@@ -30,16 +30,28 @@ class DatabaseSeeder extends Seeder
         // On crée 100 passagers (ce qui créera aussi 100 users automatiquement)
         Passenger::factory(100)->create();
 
-        // Optionnel : Créer un utilisateur spécifique pour tes tests manuels
-        $testUser = User::factory()->create([
+        // Optionnel : Créer un passager spécifique pour tes tests manuels
+        $testPassenger = User::factory()->create([
             'name' => 'Client Test',
             'email' => 'client@samataxi.sn',
             'password' => bcrypt('password'),
         ]);
 
         Passenger::create([
-            'user_id' => $testUser->id,
+            'user_id' => $testPassenger->id,
             'phone_number' => '+221770000000',
+        ]);
+
+        // Optionnel : Créer un chauffeur spécifique pour tes tests manuels
+        $testDriver = User::factory()->create([
+            'name' => 'Driver Test',
+            'email' => 'modou.fall@samataxi.sn',
+            'password' => bcrypt('password'),
+        ]);
+
+        Driver::create([
+            'user_id' => $testDriver->id,
+            'phone_number' => '+221771111111',
         ]);
 
     }

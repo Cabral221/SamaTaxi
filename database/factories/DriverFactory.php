@@ -25,7 +25,6 @@ class DriverFactory extends Factory
 
         return [
             'user_id' => User::factory(), // Crée un User pour chaque Driver
-            'full_name' => fake()->name(),
             'phone_number' => fake()->phoneNumber(),
             'status' => fake()->randomElement(['available', 'busy', 'offline']),
             'current_location' => DB::raw("ST_GeomFromText('POINT($lng $lat)', 4326)"),

@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('drivers', function (Blueprint $table) {
             $table->id();
-            $table->string('full_name');
             $table->string('phone_number')->unique();
             $table->enum('status', ['available', 'busy', 'offline'])->default('offline');
 
