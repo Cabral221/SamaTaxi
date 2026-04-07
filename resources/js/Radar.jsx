@@ -16,8 +16,14 @@ function Radar() {
     const [loading, setLoading] = useState(true);
     const [coords, setCoords] = useState(null);
 
-    // Coordonnées de test (Dakar Plateau)
-    // const testLocation = { lat: 14.6681, lng: -17.4344 };
+    // Initialisation du son (chargé une seule fois)
+    const notificationSound = new Audio('/sounds/ride_requested.wav');
+    const playNotification = () => {
+        // .play() retourne une promesse pour gérer les blocages navigateurs
+        notificationSound.play().catch(error => {
+            console.warn("L'audio n'a pas pu être lu (attente d'une interaction utilisateur) :", error);
+        });
+    };
 
     useEffect(() => {
         // --- A. GEOLOCALISATION ---
@@ -78,6 +84,8 @@ function Radar() {
         // Nouvelle course créée
         channel.listen('.ride.created', (e) => {
             console.log("🔔 WebSocket : Nouvelle course !", e);
+            // 🔥 ON JOUE LE SON ICI
+            playNotification();
             setNewRides((prev) => [e.ride, ...prev]);
         });
         // Course acceptée par quelqu'un d'autre
