@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Driver;
+use App\Models\Passenger;
+use App\Models\Ride;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -36,4 +38,10 @@ class User extends Authenticatable
     {
         return $this->hasOne(Driver::class);
     }
+
+    public function passenger()
+    {
+        return $this->hasOne(Passenger::class);
+    }
+
 }

@@ -3,25 +3,16 @@
 namespace App\Models;
 
 use App\Models\Ride;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Driver extends Model
+class Passenger extends Model
 {
+
     use HasFactory;
 
     protected $fillable = [
         'user_id',
-        'phone_number',
-        'status',
-        'current_location'
-    ];
-
-    // Pour simplifier, on va caster la localisation en attendant
-    // d'installer une librairie spatiale plus tard
-    protected $casts = [
-        // 'current_location' => 'string',
     ];
 
     public function user()
