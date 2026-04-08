@@ -9,3 +9,12 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+
+/* Cache le panneau d'itinéraire de Leaflet Routing Machine */
+.leaflet-routing-container {
+    display: none !important;
+    visibility: hidden !important;
+    /* Pour pouvoir cliquer sur la carte "à travers" le panneau caché */
+    pointer-events: none !important;
+}

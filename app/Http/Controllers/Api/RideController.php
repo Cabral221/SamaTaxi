@@ -182,24 +182,36 @@ class RideController extends Controller
             'lng' => 'required|numeric',
         ]);
 
-        // 1. On récupère l'utilisateur connecté via le Token
-        $user = $request->user();
-
-        // 2. On vérifie que cet utilisateur est bien un chauffeur
-        $driver = $user->driver;
-
+        $driver = auth()->user()->driver;
         if (!$driver) {
-            return response()->json(['message' => 'Accès refusé. Vous n\'êtes pas un chauffeur.'], 403);
+            return response()->json(['message' => 'Non autorisé'], 403);
         }
 
-        // 3. Mise à jour de SA position uniquement
+        // ✅ ÉTAPE 1 : On garde ta logique vitale (Mise à jour pour le radar client)
         $driver->update([
             'current_location' => DB::raw("ST_GeomFromText('POINT({$request->lng} {$request->lat})', 4326)")
         ]);
 
-        return response()->json([
+        // ✅ ÉTAPE 2 : On prépare la réponse de base
+        $response = [
             'success' => true,
-            'message' => 'Position de ' . $driver->user->name . ' mise à jour avec succès.'
-        ]);
+            'message' => 'Position mise à jour'
+        ];
+
+        // ✅ ÉTAPE 3 : On ajoute l'intelligence de course SEULEMENT si le chauffeur est occupé
+        // On cherche une course acceptée ou arrivée
+        $activeRide = Ride::where('driver_id', $driver->id)
+            ->whereIn('status', ['accepted', 'arrived'])
+            ->first();
+
+        if ($activeRide) {
+            $distance = $activeRide->getDistanceToPickup($request->lat, $request->lng);
+            $response['active_ride_context'] = [
+                'distance_to_pickup' => round($distance),
+                'is_nearby' => $distance <= 150
+            ];
+        }
+
+        return response()->json($response);
     }
 }
