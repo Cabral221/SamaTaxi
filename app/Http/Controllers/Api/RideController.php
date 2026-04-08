@@ -43,6 +43,11 @@ class RideController extends Controller
             'status' => 'requested', // Statut initial : En attente
         ]);
 
+
+        // 🔥 LA CORRECTION EST ICI :
+        // On recharge le ride depuis la base pour transformer le DB::raw en vrai binaire lisible
+        $ride = Ride::find($ride->id);
+
         // 3. Émettre un événement pour notifier les chauffeurs disponibles
         event(new RideRequested($ride));
 
@@ -69,7 +74,8 @@ class RideController extends Controller
         // On définit le point géographique une seule fois pour plus de clarté
         // Note le ::geography à la fin de la chaîne SQL pour forcer le type géographique et éviter les erreurs de distance
         $driverPoint = "ST_GeomFromText('POINT($lng $lat)', 4326)::geography";
-        $rides = Ride::where('status', 'requested')
+        $rides = Ride::with('passenger.user') // Ajout de la relation pour avoir le nom du client dans le radar
+            ->where('status', 'requested')
             ->whereNull('driver_id')
             ->whereRaw("ST_Distance($driverPoint, pickup_location) <= ?", [$radius])
             ->select('*')
@@ -77,10 +83,10 @@ class RideController extends Controller
             ->orderBy('distance_to_pickup')
             ->get();
 
-        Return response()->json([
+        return response()->json([
             'success' => true,
             'count' => $rides->count(),
-            'available_rides' => $rides
+            'available_rides' => $rides // Grâce aux $appends dans Ride.php, pickup_lat et pickup_lng seront inclus ici
         ]);
 
     }
@@ -110,7 +116,7 @@ class RideController extends Controller
             ], 409); // Code 409 : Conflict
         }
 
-        // On recharge le modèle pour avoir les relations (passenger, user)
+        // On recharge le modèle pour avoir les relations (passenger, user) et les coordonnées calculées
         $ride = Ride::with('passenger.user')->find($id);
 
         // Émettre un événement pour supprimer la course des listes de tous les autres chauffeurs connectés
@@ -119,7 +125,7 @@ class RideController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Course acceptée ! En route vers le client.',
-            'ride' => $ride->load('passenger.user') // Charger les infos du passager pour le chauffeur
+            'ride' => $ride // Les appends fonctionneront ici aussi
         ]);
     }
 

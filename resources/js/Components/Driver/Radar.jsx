@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import MapDisplay from '../Common/MapDisplay';
+import Navigation from './Navigation';
 
 function Radar() {
     const [newRides, setNewRides] = useState([]);
+    const [activeRide, setActiveRide] = useState(null);
     const [loading, setLoading] = useState(true);
     const [coords, setCoords] = useState(null);
 
@@ -90,22 +93,29 @@ function Radar() {
     // Action pour accepter une course
     const handleAccept = async (rideId) => {
         try {
-            // On récupère le token (soit depuis le localStorage, soit depuis ta variable globale de test)
-            const token = window.authToken || localStorage.getItem('token');
-
-            const response = await axios.post(`/api/rides/${rideId}/accept`, {}, { // {} pour le body vide
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
-                }
-            });
-            alert("Course acceptée ! En route.");
-            // On la retire localement
-            setNewRides((prev) => prev.filter(r => r.id !== rideId));
+            const response = await axios.post(`/api/rides/${rideId}/accept`, {});
+            if (response.data.success) {
+                // On récupère les détails de la course acceptée
+                setActiveRide(response.data.ride);
+            }
         } catch (error) {
-            alert(error.response?.data?.message || "Erreur lors de l'acceptation");
+            alert("Trop tard ! La course a été prise.");
         }
     };
+
+    // 🔀 AIGUILLAGE DE VUE
+    if (activeRide) {
+        return (
+            activeRide && (
+                <Navigation
+                driverCoords={coords}
+                ride={activeRide}
+                onCancel={() => setActiveRide(null)}
+                />
+            )
+        );
+    }
+
 
     if (!coords) return <div>Activation du GPS SamaTaxi...</div>;
     if (loading) return <div>Recherche des clients à proximité...</div>;
@@ -113,6 +123,11 @@ function Radar() {
     return (
         <div style={{ padding: '20px', background: '#f0f0f0', borderRadius: '8px' }}>
             <h3>🚕 Radar SamaTaxi (Live)</h3>
+
+            {/* LA CARTE EST ICI */}
+            <div style={{ height: '400px'}}>
+                <MapDisplay center={coords} rides={newRides} />
+            </div>
 
             {newRides.length === 0 && <p>Aucune course à proximité pour le moment...</p>}
 
