@@ -13,6 +13,8 @@ class Ride extends Model
         'passenger_id',
         'driver_id',
         'status',
+        'pickup_address',
+        'destination_address',
         'pickup_location',
         'destination_location',
         'estimated_price',

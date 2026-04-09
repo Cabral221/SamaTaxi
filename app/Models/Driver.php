@@ -24,6 +24,38 @@ class Driver extends Model
         // 'current_location' => 'string',
     ];
 
+    protected $appends = ['lat', 'lng'];
+
+    // Forcez Laravel à ne pas essayer de deviner le type de current_location
+    protected $attributes = [
+        'status' => 'offline',
+    ];
+
+    public function getLatAttribute()
+    {
+        // 1. Si on a déjà forcé la valeur (via le controller ou setAttribute)
+        if (isset($this->attributes['lat'])) {
+            return (float) $this->attributes['lat'];
+        }
+
+        // 2. Si current_location est une chaîne binaire (PostgreSQL standard)
+        // On essaie d'extraire la valeur si elle existe dans l'objet
+        return $this->current_location && method_exists($this->current_location, 'getLat')
+            ? $this->current_location->getLat()
+            : null;
+    }
+
+    public function getLngAttribute()
+    {
+        if (isset($this->attributes['lng'])) {
+            return (float) $this->attributes['lng'];
+        }
+
+        return $this->current_location && method_exists($this->current_location, 'getLng')
+            ? $this->current_location->getLng()
+            : null;
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

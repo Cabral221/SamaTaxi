@@ -19,6 +19,9 @@ return new class extends Migration
             // Statuts : requested, accepted, ongoing, completed, cancelled
             $table->string('status')->default('requested');
 
+            $table->string('pickup_address')->nullable();
+            $table->string('destination_address')->nullable();
+
             // Géographie PostGIS pour l'origine et la destination
             $table->geography('pickup_location', 'point', 4326);
             $table->geography('destination_location', 'point', 4326);
