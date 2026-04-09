@@ -102,7 +102,14 @@ function Radar() {
         channel.listen('.ride.created', (e) => {
             console.log("🔔 WebSocket : Nouvelle course !", e);
             playNotification();
-            setNewRides((prev) => [e.ride, ...prev]);
+            setNewRides((prev) => {
+                // Vérifier si la course est déjà dans la liste (par son ID)
+                const exists = prev.find(r => r.id === e.ride.id);
+                if (exists) return prev; // Si elle existe, on ne change rien
+
+                return [e.ride, ...prev]; // Sinon on l'ajoute
+            });
+
         });
 
         channel.listen('.ride.accepted', (e) => {
