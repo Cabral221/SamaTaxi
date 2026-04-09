@@ -21,7 +21,7 @@ class RideAccepted implements ShouldBroadcast
      */
     public function __construct($ride)
     {
-        $this->ride = $ride->load('passenger.user');
+        $this->ride = $ride;
     }
 
     /**
@@ -32,9 +32,10 @@ class RideAccepted implements ShouldBroadcast
     public function broadcastOn(): array
     {
         // Pour le test, on utilise un canal public "rides"
-        // Plus tard, on sécurisera avec un PrivateChannel basé sur la ville/zone
+        // Plus tard, on sécurisera avec un PrivateChannel basé sur la ville/zone/passager
         return [
-            new Channel('available-rides'),
+            new Channel('available-rides'), // Pour les autres chauffeurs
+            new PrivateChannel('rides.' . $this->ride->id) // Pour LE passager concerné
         ];
     }
 

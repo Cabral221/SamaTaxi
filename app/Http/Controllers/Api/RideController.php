@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class RideController extends Controller
 {
-
+    // Commande de Course
     public function store(Request $request)
     {
         // On récupère le profil passager de l'utilisateur connecté
@@ -31,6 +31,8 @@ class RideController extends Controller
             'destination_lng' => 'required|numeric',
             'price' => 'required|numeric',
             'distance_km' => 'required|numeric',
+            'pickup_address' => 'nullable|string', // Nouvelle colonne
+            'destination_address' => 'nullable|string', // Nouvelle colonne
         ]);
 
         // 2. Création de la course
@@ -38,6 +40,8 @@ class RideController extends Controller
             'passenger_id' => $passenger->id,
             'pickup_location' => DB::raw("ST_GeomFromText('POINT({$validated['pickup_lng']} {$validated['pickup_lat']})', 4326)"),
             'destination_location' => DB::raw("ST_GeomFromText('POINT({$validated['destination_lng']} {$validated['destination_lat']})', 4326)"),
+            'pickup_address' => $validated['pickup_address'] ?? null, // Stockage de l'adresse texte
+            'destination_address' => $validated['destination_address'] ?? null, // Stockage de l'adresse texte
             'estimated_price' => $validated['price'],
             'distance_km' => $validated['distance_km'],
             'status' => 'requested', // Statut initial : En attente
@@ -59,6 +63,7 @@ class RideController extends Controller
         ], 201);
     }
 
+    // Endpoint pour les chauffeurs : Voir les courses disponibles à proximité
     public function availableRides(Request $request)
     {
         $request->validate([
@@ -91,44 +96,52 @@ class RideController extends Controller
 
     }
 
+    // Endpoint pour les chauffeurs : Accepter une course
     public function acceptRide(Request $request, $id)
     {
-        // 1. Récupérer le chauffeur connecté
         $driver = auth()->user()->driver;
         if (!$driver) {
-            return response()->json(['message' => 'Accès refusé. Vous n\'êtes pas un chauffeur.'], 403);
+            return response()->json(['message' => 'Accès refusé'], 403);
         }
 
-
-        // 2. Accepter la course (Mise à jour atomique)
-        // On ajoute la condition 'status' => 'requested' directement dans l'UPDATE SQL
+        // Mise à jour du statut
         $updated = Ride::where('id', $id)
-            ->where('status', 'requested') // Sécurité : la ligne doit encore être libre
+            ->where('status', 'requested')
             ->update([
                 'driver_id' => $driver->id,
                 'status' => 'accepted'
             ]);
 
-        // Si $updated est égal à 0, cela veut dire qu'un autre chauffeur a été plus rapide !
         if (!$updated) {
-            return response()->json([
-                'message' => 'Désolé, un autre chauffeur vient d\'accepter cette course.'
-            ], 409); // Code 409 : Conflict
+            return response()->json(['message' => 'Désolé, course déjà prise.'], 409);
         }
 
-        // On recharge le modèle pour avoir les relations (passenger, user) et les coordonnées calculées
-        $ride = Ride::with('passenger.user')->find($id);
+        // RECHARGE SIMPLE : On ne demande PAS le calcul PostGIS ici pour éviter l'erreur 500
+        $ride = Ride::with(['passenger.user', 'driver.user'])->find($id);
 
-        // Émettre un événement pour supprimer la course des listes de tous les autres chauffeurs connectés
+        // Optionnel : On peut aussi mettre à jour le statut du chauffeur pour qu'il n'apparaisse plus dans les recherches
+        $ride->driver->update(['status' => 'busy']);
+
+        if ($ride->driver) {
+            $coords = DB::select("SELECT ST_X(current_location::geometry) as lng, ST_Y(current_location::geometry) as lat FROM drivers WHERE id = ?", [$ride->driver_id])[0];
+
+            // Utilisation de setAttribute pour éviter que Laravel ne croie que ce sont des colonnes DB
+            $ride->driver->setAttribute('lat', (float)$coords->lat);
+            $ride->driver->setAttribute('lng', (float)$coords->lng);
+        }
+
+
+        // On émet l'événement pour le client (Navigation.jsx)
         event(new RideAccepted($ride));
 
         return response()->json([
             'success' => true,
-            'message' => 'Course acceptée ! En route vers le client.',
-            'ride' => $ride // Les appends fonctionneront ici aussi
+            'message' => 'Course acceptée !',
+            'ride' => $ride
         ]);
     }
 
+    // Endpoint pour l'estimation de course + radar client
     public function estimate(Request $request)
     {
         $validated = $request->validate([
@@ -175,43 +188,25 @@ class RideController extends Controller
         ]);
     }
 
-    public function updateLocation(Request $request)
+    public function cancel($id)
     {
-        $request->validate([
-            'lat' => 'required|numeric',
-            'lng' => 'required|numeric',
-        ]);
+        $ride = Ride::find($id);
 
-        $driver = auth()->user()->driver;
-        if (!$driver) {
-            return response()->json(['message' => 'Non autorisé'], 403);
+        // Sécurité : Seul le passager ou le chauffeur peut annuler
+        // Et on ne peut annuler que si la course n'est pas déjà terminée
+        if ($ride->status === 'completed') {
+            return response()->json(['message' => 'Impossible d\'annuler une course terminée'], 400);
         }
 
-        // ✅ ÉTAPE 1 : On garde ta logique vitale (Mise à jour pour le radar client)
-        $driver->update([
-            'current_location' => DB::raw("ST_GeomFromText('POINT({$request->lng} {$request->lat})', 4326)")
-        ]);
+        $ride->update(['status' => 'cancelled']);
 
-        // ✅ ÉTAPE 2 : On prépare la réponse de base
-        $response = [
+        // TODO : Émettre un événement RideCancelled pour prévenir le chauffeur
+        // event(new RideCancelled($ride));
+
+        return response()->json([
             'success' => true,
-            'message' => 'Position mise à jour'
-        ];
-
-        // ✅ ÉTAPE 3 : On ajoute l'intelligence de course SEULEMENT si le chauffeur est occupé
-        // On cherche une course acceptée ou arrivée
-        $activeRide = Ride::where('driver_id', $driver->id)
-            ->whereIn('status', ['accepted', 'arrived'])
-            ->first();
-
-        if ($activeRide) {
-            $distance = $activeRide->getDistanceToPickup($request->lat, $request->lng);
-            $response['active_ride_context'] = [
-                'distance_to_pickup' => round($distance),
-                'is_nearby' => $distance <= 150
-            ];
-        }
-
-        return response()->json($response);
+            'message' => 'Course annulée avec succès'
+        ]);
     }
+
 }
