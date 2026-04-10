@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
+import axios from 'axios'; // Ajouté car utilisé dans handleCancelRide
 
 const taxiIcon = L.icon({
     iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
@@ -14,32 +15,57 @@ function RoutingLayer({ from, to }) {
     const routingControlRef = useRef(null);
 
     useEffect(() => {
-        if (!map || !from || !to) return;
+        // Sécurité : on vérifie que la map et les coordonnées sont valides
+        if (!map || !from?.lat || !to?.lat) return;
 
-        const routingControl = L.Routing.control({
-            waypoints: [L.latLng(from.lat, from.lng), L.latLng(to.lat, to.lng)],
-            lineOptions: { styles: [{ color: '#2ecc71', weight: 5, opacity: 0.7 }] },
-            addWaypoints: false,
-            draggableWaypoints: false,
-            show: false,
-            createMarker: () => null
-        }).addTo(map);
+        try {
+            const routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(from.lat, from.lng),
+                    L.latLng(to.lat, to.lng)
+                ],
+                lineOptions: {
+                    styles: [{ color: '#2ecc71', weight: 5, opacity: 0.7 }],
+                    extendToWaypoints: false,
+                    missingRouteTolerance: 0
+                },
+                addWaypoints: false,
+                draggableWaypoints: false,
+                show: false,
+                createMarker: () => null
+            }).addTo(map);
 
-        routingControlRef.current = routingControl;
+            routingControlRef.current = routingControl;
+        } catch (err) {
+            console.error("Erreur initialisation RoutingControl:", err);
+        }
 
         return () => {
-            if (map && routingControlRef.current) map.removeControl(routingControlRef.current);
+            // Nettoyage sécurisé pour éviter "reading removeLayer of null"
+            if (map && routingControlRef.current) {
+                try {
+                    map.removeControl(routingControlRef.current);
+                    routingControlRef.current = null;
+                } catch (e) {
+                    console.warn("Leaflet cleanup safety catch:", e);
+                }
+            }
         };
-    }, [map, from, to]);
+    }, [map]); // On ne recrée le contrôle QUE si la map change
 
+    // Effet séparé pour mettre à jour les points sans détruire/recréer le contrôle
     useEffect(() => {
-        if (routingControlRef.current && from) {
-            routingControlRef.current.setWaypoints([
-                L.latLng(from.lat, from.lng),
-                L.latLng(to.lat, to.lng)
-            ]);
+        if (routingControlRef.current && from?.lat && to?.lat) {
+            try {
+                routingControlRef.current.setWaypoints([
+                    L.latLng(from.lat, from.lng),
+                    L.latLng(to.lat, to.lng)
+                ]);
+            } catch (e) {
+                console.log("Erreur mise à jour waypoints:", e);
+            }
         }
-    }, [from.lat, from.lng]);
+    }, [from.lat, from.lng, to.lat, to.lng]);
 
     return null;
 }
@@ -82,12 +108,17 @@ function Navigation({ ride, onCancelSuccess }) {
         const channel = window.Echo.private(`rides.${ride.id}`);
         channel.listen('.driver.moved', (e) => {
             console.log("✅ Live GPS Chauffeur :", e);
-            setDriverPos({ lat: e.lat, lng: e.lng });
-            if (e.distance_to_pickup) {
-                setInfo({
-                    distance: Math.round(e.distance_to_pickup),
-                    time: Math.ceil(e.distance_to_pickup / 300)
-                });
+
+            // On s'assure que les données reçues sont valides
+            if (e.lat && e.lng) {
+                setDriverPos({ lat: parseFloat(e.lat), lng: parseFloat(e.lng) });
+
+                if (e.distance_to_pickup) {
+                    setInfo({
+                        distance: Math.round(e.distance_to_pickup),
+                        time: Math.ceil(e.distance_to_pickup / 300)
+                    });
+                }
             }
         });
 
@@ -109,6 +140,7 @@ function Navigation({ ride, onCancelSuccess }) {
 
     return (
         <div style={{ height: '100vh', width: '100%', position: 'relative' }}>
+            {/* Overlay Info */}
             <div style={{
                 position: 'absolute', top: 20, left: 15, right: 15, zIndex: 1000,
                 background: 'white', padding: '15px', borderRadius: '12px',
@@ -123,17 +155,25 @@ function Navigation({ ride, onCancelSuccess }) {
 
             <MapContainer center={[ride.pickup_lat, ride.pickup_lng]} zoom={15} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+                {/* Marqueur Passager (Moi) */}
                 <Marker position={[ride.pickup_lat, ride.pickup_lng]}>
                     <Popup>Ma position</Popup>
                 </Marker>
+
+                {/* Marqueur Chauffeur + Tracé */}
                 {driverPos && (
                     <>
                         <Marker position={[driverPos.lat, driverPos.lng]} icon={taxiIcon} />
-                        <RoutingLayer from={driverPos} to={{ lat: ride.pickup_lat, lng: ride.pickup_lng }} />
+                        <RoutingLayer
+                            from={driverPos}
+                            to={{ lat: parseFloat(ride.pickup_lat), lng: parseFloat(ride.pickup_lng) }}
+                        />
                     </>
                 )}
             </MapContainer>
 
+            {/* Bouton Annuler */}
             <div style={{ position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: '90%' }}>
                 <button onClick={handleCancelRide} disabled={isCancelling} style={{
                     width: '100%', padding: '15px', background: '#e74c3c', color: 'white',
