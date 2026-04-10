@@ -15,10 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('phone_number')->unique();
             $table->enum('status', ['available', 'busy', 'offline'])->default('offline');
-
             // Colonne PostGIS pour la position actuelle
             // On utilise 'geography' pour des calculs précis en mètres/kilomètres
             $table->geography('current_location', 'point', 4326)->nullable();
+            // 10 chiffres au total, 8 après la virgule pour une précision au centimètre
+            $table->decimal('lat', 10, 8)->nullable()->after('current_location');
+            $table->decimal('lng', 11, 8)->nullable()->after('lat');
 
             $table->timestamps();
         });

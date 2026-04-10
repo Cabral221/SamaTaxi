@@ -30,7 +30,7 @@ function RoutingLayer({ from, to }) {
         return () => {
             if (map && routingControlRef.current) map.removeControl(routingControlRef.current);
         };
-    }, [map]);
+    }, [map, from, to]);
 
     useEffect(() => {
         if (routingControlRef.current && from) {

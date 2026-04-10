@@ -15,13 +15,14 @@ class Driver extends Model
         'user_id',
         'phone_number',
         'status',
-        'current_location'
+        'current_location',
+        'lat',
+        'lng',
     ];
 
-    // Pour simplifier, on va caster la localisation en attendant
-    // d'installer une librairie spatiale plus tard
     protected $casts = [
-        // 'current_location' => 'string',
+        'lat' => 'float',
+        'lng' => 'float',
     ];
 
     protected $appends = ['lat', 'lng'];
@@ -31,29 +32,15 @@ class Driver extends Model
         'status' => 'offline',
     ];
 
-    public function getLatAttribute()
+    // Les accesseurs deviennent très simples
+    public function getLatAttribute($value)
     {
-        // 1. Si on a déjà forcé la valeur (via le controller ou setAttribute)
-        if (isset($this->attributes['lat'])) {
-            return (float) $this->attributes['lat'];
-        }
-
-        // 2. Si current_location est une chaîne binaire (PostgreSQL standard)
-        // On essaie d'extraire la valeur si elle existe dans l'objet
-        return $this->current_location && method_exists($this->current_location, 'getLat')
-            ? $this->current_location->getLat()
-            : null;
+        return $value;
     }
 
-    public function getLngAttribute()
+    public function getLngAttribute($value)
     {
-        if (isset($this->attributes['lng'])) {
-            return (float) $this->attributes['lng'];
-        }
-
-        return $this->current_location && method_exists($this->current_location, 'getLng')
-            ? $this->current_location->getLng()
-            : null;
+        return $value;
     }
 
     public function user()

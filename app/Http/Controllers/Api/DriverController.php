@@ -18,12 +18,15 @@ class DriverController extends Controller
         ]);
 
         $driver = auth()->user()->driver;
+        
         if (!$driver) {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
         // 1. Mise à jour de la position dans la DB
         $driver->update([
+            'lat' => $request->lat,
+            'lng' => $request->lng,
             'current_location' => DB::raw("ST_GeomFromText('POINT({$request->lng} {$request->lat})', 4326)")
         ]);
 

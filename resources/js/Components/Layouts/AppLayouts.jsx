@@ -35,7 +35,7 @@ function AppLayout({ children }) {
                 {user ? (
                     <>
                         {/* 🚕 Cas Chauffeur */}
-                        {user.role === 'driver' && <Radar />}
+                        {user.role === 'driver' && <Radar user={user} />}
 
                         {/* 👤 Cas Passager (On vérifie explicitement le rôle) */}
                         {user.role === 'passenger' && <Index />}

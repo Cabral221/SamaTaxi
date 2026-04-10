@@ -103,6 +103,8 @@ class RideController extends Controller
         if (!$driver) {
             return response()->json(['message' => 'Accès refusé'], 403);
         }
+        // Optionnel : On peut aussi mettre à jour le statut du chauffeur pour qu'il n'apparaisse plus dans les recherches
+        $driver->update(['status' => 'busy']);
 
         // Mise à jour du statut
         $updated = Ride::where('id', $id)
@@ -116,19 +118,14 @@ class RideController extends Controller
             return response()->json(['message' => 'Désolé, course déjà prise.'], 409);
         }
 
-        // RECHARGE SIMPLE : On ne demande PAS le calcul PostGIS ici pour éviter l'erreur 500
+        // 2. LA CLÉ : Utiliser refresh() ou un fresh() avec les relations
+        // On recharge la course ET on force le rechargement de la relation driver
         $ride = Ride::with(['passenger.user', 'driver.user'])->find($id);
 
-        // Optionnel : On peut aussi mettre à jour le statut du chauffeur pour qu'il n'apparaisse plus dans les recherches
-        $ride->driver->update(['status' => 'busy']);
 
-        if ($ride->driver) {
-            $coords = DB::select("SELECT ST_X(current_location::geometry) as lng, ST_Y(current_location::geometry) as lat FROM drivers WHERE id = ?", [$ride->driver_id])[0];
+        // Pour être 100% certain que le driver est à jour avec les colonnes lat/lng
+        $ride->driver->refresh();
 
-            // Utilisation de setAttribute pour éviter que Laravel ne croie que ce sont des colonnes DB
-            $ride->driver->setAttribute('lat', (float)$coords->lat);
-            $ride->driver->setAttribute('lng', (float)$coords->lng);
-        }
 
 
         // On émet l'événement pour le client (Navigation.jsx)

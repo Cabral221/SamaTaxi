@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import MapDisplay from '../Common/MapDisplay';
 import Navigation from './Navigation';
@@ -6,13 +6,15 @@ import Navigation from './Navigation';
 // En dehors ou au début du composant
 const notificationSound = new Audio('/sounds/ride_requested.wav');
 
-function Radar() {
+function Radar({ user }) {
     const [newRides, setNewRides] = useState([]);
     const [activeRide, setActiveRide] = useState(null);
     const [loading, setLoading] = useState(true);
     const [coords, setCoords] = useState(null);
     // 🔥 AJOUT : État pour la distance dynamique
     const [distanceToPickup, setDistanceToPickup] = useState(null);
+    // Crée une variable useRef pour stocker le dernier envoi
+    const lastUpdateRef = useRef(0);
 
     // 🔥 FONCTION POUR DÉBLOQUER L'AUDIO
     const unlockAudio = () => {
@@ -51,14 +53,22 @@ function Radar() {
                 const newPos = { lat: position.coords.latitude, lng: position.coords.longitude };
                 setCoords(newPos);
 
-                // 🔥 MODIFICATION : On récupère la distance renvoyée par ton API enrichie
-                axios.post('/api/driver/location', newPos)
+
+                // Limite les mises à jour à une toutes les 5 secondes
+                const now = Date.now();
+                if (now - lastUpdateRef.current > 5000) { // On n'envoie que toutes les 5 secondes
+                    lastUpdateRef.current = now;
+                    // axios.post('/api/driver/location', newPos)...
+
+                    // 🔥 MODIFICATION : On récupère la distance renvoyée par ton API enrichie
+                    axios.post('/api/driver/location', newPos)
                     .then(res => {
                         if (res.data.active_ride_context) {
                             setDistanceToPickup(res.data.active_ride_context.distance_to_pickup);
                         }
                     })
                     .catch(e => console.log("DB Update failed"));
+                }
             },
             (error) => console.error("Erreur GPS:", error),
             { enableHighAccuracy: true }
@@ -113,12 +123,30 @@ function Radar() {
         });
 
         channel.listen('.ride.accepted', (e) => {
-            console.log("🔕 WebSocket : Course acceptée par un collègue", e);
+            console.log("🔕 WebSocket : Course acceptée", e);
+
+            // 1. On prépare l'objet enrichi
+            const enrichedRide = {
+                ...e.ride,
+                driver: {
+                    ...e.ride.driver,
+                    lat: e.driverPosition?.lat,
+                    lng: e.driverPosition?.lng
+                }
+            };
+
+            // 2. On nettoie le radar pour tout le monde
             setNewRides((prev) => prev.filter(ride => ride.id !== e.ride.id));
+            // 3. MISE À JOUR : On vérifie si c'est NOTRE ID (via le user)
+            // Ici, je suppose que vous avez accès à l'utilisateur connecté
+            if (user && Number(e.ride.driver.user.id) === Number(user.id)) {
+                console.log("C'est ma course !", user);
+                setActiveRide(enrichedRide);
+            }
         });
 
         return () => window.Echo.leave('available-rides');
-    }, [coords]);
+    }, [coords, user]);
 
     // Action pour accepter une course
     const handleAccept = async (rideId) => {
