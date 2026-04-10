@@ -12,6 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
+    // --- AJOUTE CE BLOC ICI ---
+    ->withBroadcasting(
+        '/broadcasting/auth',
+        ['middleware' => ['auth:sanctum']],
+    )
+    // --------------------------
     ->withMiddleware(function (Middleware $middleware): void {
         //
     })

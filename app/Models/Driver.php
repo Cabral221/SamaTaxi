@@ -15,14 +15,33 @@ class Driver extends Model
         'user_id',
         'phone_number',
         'status',
-        'current_location'
+        'current_location',
+        'lat',
+        'lng',
     ];
 
-    // Pour simplifier, on va caster la localisation en attendant
-    // d'installer une librairie spatiale plus tard
     protected $casts = [
-        // 'current_location' => 'string',
+        'lat' => 'float',
+        'lng' => 'float',
     ];
+
+    protected $appends = ['lat', 'lng'];
+
+    // Forcez Laravel à ne pas essayer de deviner le type de current_location
+    protected $attributes = [
+        'status' => 'offline',
+    ];
+
+    // Les accesseurs deviennent très simples
+    public function getLatAttribute($value)
+    {
+        return $value;
+    }
+
+    public function getLngAttribute($value)
+    {
+        return $value;
+    }
 
     public function user()
     {

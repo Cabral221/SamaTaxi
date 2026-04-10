@@ -27,7 +27,7 @@ SamaTaxi est une solution moderne de mise en relation entre chauffeurs et client
 
 1. **Cloner le projet**
    ```bash
-   git clone [https://github.com/TON_PSEUDO/samataxi-api.git](https://github.com/TON_PSEUDO/samataxi-api.git)
+   git clone [https://github.com/Cabral221/samataxi-api.git](https://github.com/Cabral221/samataxi-api.git)
    cd samataxi-api
 
 2. Installer les dépendances
