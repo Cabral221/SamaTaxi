@@ -78,8 +78,6 @@ function RoutingLayer({ from, to }) {
     return null;
 }
 
-const arrivalSound = new Audio('/sounds/ride_requested.wav');
-
 function Navigation({ ride, onCancelSuccess }) {
     const [driverPos, setDriverPos] = useState(() => {
         if (ride.driver && ride.driver.lat && ride.driver.lng) {
@@ -111,11 +109,6 @@ function Navigation({ ride, onCancelSuccess }) {
             time: Math.ceil(distanceMeters / 400)
         });
 
-        if (rideStatus !== 'in_progress' && distanceMeters <= 20 && !hasNotifiedArrival) {
-            arrivalSound.play().catch(e => console.warn(e));
-            setHasNotifiedArrival(true);
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-        }
     }, [driverPos, rideStatus, ride.pickup_lat, ride.destination_lat]);
 
     useEffect(() => {
