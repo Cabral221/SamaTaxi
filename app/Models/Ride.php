@@ -23,9 +23,14 @@ class Ride extends Model
         'completed_at'
     ];
 
-    protected $appends = ['pickup_lat', 'pickup_lng'];
+    protected $appends = [
+        'pickup_lat',
+        'pickup_lng',
+        'destination_lat',
+        'destination_lng'
+    ];
 
-    // Accesseur pour la Latitude (Y)
+    // Accesseur prise en charge pour la Latitude (Y)
     public function getPickupLatAttribute()
     {
         if (!$this->pickup_location || is_object($this->pickup_location)) {
@@ -39,7 +44,7 @@ class Ride extends Model
         return isset($result[0]) ? (float)$result[0]->lat : null;
     }
 
-    // Accesseur pour la Longitude (X)
+    // Accesseur prise en charge pour la Longitude (X)
     public function getPickupLngAttribute()
     {
         if (!$this->pickup_location || is_object($this->pickup_location)) {
@@ -48,6 +53,24 @@ class Ride extends Model
 
         $result = DB::select("SELECT ST_X(?::geometry) as lng", [$this->pickup_location]);
 
+        return isset($result[0]) ? (float)$result[0]->lng : null;
+    }
+
+    // Accesseur pour la Latitude (Y) de la destination
+    public function getDestinationLatAttribute()
+    {
+        if (!$this->destination_location) return null;
+
+        $result = DB::select("SELECT ST_Y(?::geometry) as lat", [$this->destination_location]);
+        return isset($result[0]) ? (float)$result[0]->lat : null;
+    }
+
+    // Accesseur pour Destination Longitude
+    public function getDestinationLngAttribute()
+    {
+        if (!$this->destination_location) return null;
+
+        $result = DB::select("SELECT ST_X(?::geometry) as lng", [$this->destination_location]);
         return isset($result[0]) ? (float)$result[0]->lng : null;
     }
 

@@ -163,30 +163,33 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
             <MapContainer center={[driverCoords.lat, driverCoords.lng]} zoom={16} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
+                {/* 1. Toujours afficher le chauffeur */}
                 <Marker position={[driverCoords.lat, driverCoords.lng]} icon={taxiIcon}>
                     <Popup>Votre position</Popup>
                 </Marker>
 
-                {/* Marqueur du client (seulement si pas encore démarré) */}
-                {status !== 'in_progress' && isValidPickup && (
+                {/* 2. Marqueur Client : On l'affiche TOUJOURS si valide,
+                   mais on change son texte selon le statut */}
+                {isValidPickup && (
                     <Marker position={[pickupCoords.lat, pickupCoords.lng]}>
-                        <Popup>Point de prise en charge</Popup>
+                        <Popup>{status === 'in_progress' ? "Lieu de prise en charge (Passé)" : "Client à récupérer"}</Popup>
                     </Marker>
                 )}
 
-                {/* Marqueur destination (si démarré) */}
-                {status === 'in_progress' && isValidDest && (
+                {/* 3. Marqueur Destination : On l'affiche dès qu'il est valide,
+                   même si la course n'a pas commencé, pour que le chauffeur sache où il va */}
+                {isValidDest && (
                     <Marker position={[destCoords.lat, destCoords.lng]}>
                         <Popup>Destination finale</Popup>
                     </Marker>
                 )}
 
-                {/* Le Routing doit aussi recevoir les objets nettoyés */}
-                {/* APPEL DU ROUTING AVEC LA NOUVELLE CONDITION */}
-                {canRenderRouting && (
+                {/* 4. Le Routing : On force la persistance */}
+                {isValidDriver && (isValidPickup || isValidDest) && (
                     <Routing
+                        key={status} // FORCE le rafraîchissement propre du tracé lors du changement de statut
                         from={driverCoords}
-                        to={currentDestination}
+                        to={status === 'in_progress' ? (isValidDest ? destCoords : pickupCoords) : pickupCoords}
                     />
                 )}
             </MapContainer>
