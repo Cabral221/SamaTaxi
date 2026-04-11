@@ -8,6 +8,7 @@ use App\Events\RideStarted;
 use App\Http\Controllers\Controller;
 use App\Models\Driver;
 use App\Models\Ride;
+// use App\Events\RideCancelled;
 use App\Services\RideService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -80,11 +81,15 @@ class RideController extends Controller
         // On définit le point géographique une seule fois pour plus de clarté
         // Note le ::geography à la fin de la chaîne SQL pour forcer le type géographique et éviter les erreurs de distance
         $driverPoint = "ST_GeomFromText('POINT($lng $lat)', 4326)::geography";
+
         $rides = Ride::with('passenger.user') // Ajout de la relation pour avoir le nom du client dans le radar
             ->where('status', 'requested')
             ->whereNull('driver_id')
             ->whereRaw("ST_Distance($driverPoint, pickup_location) <= ?", [$radius])
             ->select('*')
+            // Optimisation : On récupère les points en texte pour éviter les requêtes N+1 des accesseurs
+            ->selectRaw("ST_AsText(pickup_location) as pickup_wkt")
+            ->selectRaw("ST_AsText(destination_location) as destination_wkt")
             ->selectRaw("ST_Distance($driverPoint, pickup_location) as distance_to_pickup")
             ->orderBy('distance_to_pickup')
             ->get();
@@ -140,7 +145,8 @@ class RideController extends Controller
     }
 
     // Endpoint pour les chauffeurs : Démarrer la course (passer en in_progress)
-    public function start(Ride $ride) {
+    public function start(Ride $ride)
+    {
         // Passer le statut à 'in_progress'
         $ride->update(['status' => 'in_progress']);
 

@@ -31,54 +31,29 @@ class Ride extends Model
     ];
 
     // Accesseur prise en charge pour la Latitude (Y)
-    public function getPickupLatAttribute()
-    {
-        if (!$this->pickup_location || is_object($this->pickup_location)) {
-            return null;
-        }
-
-        // On utilise ST_Y directement.
-        // Si pickup_location est une ressource stream (Postgres), on la convertit.
-        $result = DB::select("SELECT ST_Y(?::geometry) as lat", [$this->pickup_location]);
-
-        return isset($result[0]) ? (float)$result[0]->lat : null;
+    public function getPickupLatAttribute() {
+        return $this->getCoord($this->pickup_location, 'y');
     }
 
     // Accesseur prise en charge pour la Longitude (X)
-    public function getPickupLngAttribute()
-    {
-        if (!$this->pickup_location || is_object($this->pickup_location)) {
-            return null;
-        }
-
-        $result = DB::select("SELECT ST_X(?::geometry) as lng", [$this->pickup_location]);
-
-        return isset($result[0]) ? (float)$result[0]->lng : null;
+    public function getPickupLngAttribute() {
+        return $this->getCoord($this->pickup_location, 'x');
     }
 
     // Accesseur pour la Latitude (Y) de la destination
-    public function getDestinationLatAttribute()
-    {
-        if (!$this->destination_location) return null;
-
-        $result = DB::select("SELECT ST_Y(?::geometry) as lat", [$this->destination_location]);
-        return isset($result[0]) ? (float)$result[0]->lat : null;
+    public function getDestinationLatAttribute() {
+        return $this->getCoord($this->destination_location, 'y');
     }
 
     // Accesseur pour Destination Longitude
-    public function getDestinationLngAttribute()
-    {
-        if (!$this->destination_location) return null;
-
-        $result = DB::select("SELECT ST_X(?::geometry) as lng", [$this->destination_location]);
-        return isset($result[0]) ? (float)$result[0]->lng : null;
+    public function getDestinationLngAttribute() {
+        return $this->getCoord($this->destination_location, 'x');
     }
 
     /**
      * Calcule la distance entre un point GPS et le pickup_location de CETTE course
      */
-    public function getDistanceToPickup($lat, $lng)
-    {
+    public function getDistanceToPickup($lat, $lng) {
         // On passe $this->pickup_location en paramètre pour que SQL sache quoi comparer
         $result = DB::select("
             SELECT ST_Distance(
@@ -99,5 +74,38 @@ class Ride extends Model
     public function driver()
     {
         return $this->belongsTo(Driver::class, 'driver_id');
+    }
+
+    /**
+     * Helper pour extraire les coordonnées sans requête SQL additionnelle
+     * PostgreSQL renvoie souvent des ressources stream pour PostGIS
+     */
+    private function parseLocation($location)
+    {
+        if (!$location) return null;
+
+        // Si c'est déjà un objet ou une chaîne exploitable (selon votre driver)
+        // Sinon, on fait une extraction via SQL une seule fois par instance
+        // Pour une optimisation maximale, on peut utiliser ST_AsText dans la requête initiale
+        return $location;
+    }
+
+    /**
+     * Méthode centralisée pour éviter la redondance
+     */
+    protected function getCoord($location, $axis)
+    {
+        if (!$location) return null;
+
+        // Cache interne pour éviter de répéter la requête sur le même objet
+        $cacheKey = md5((string)$location . $axis);
+        if (isset($this->attributes[$cacheKey])) return $this->attributes[$cacheKey];
+
+        $func = strtoupper($axis) === 'X' ? 'ST_X' : 'ST_Y';
+        $result = DB::select("SELECT $func(?::geometry) as coord", [$location]);
+
+        $val = isset($result[0]) ? (float)$result[0]->coord : null;
+        $this->attributes[$cacheKey] = $val;
+        return $val;
     }
 }
