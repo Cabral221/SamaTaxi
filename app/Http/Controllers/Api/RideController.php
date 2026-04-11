@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\RideAccepted;
 use App\Events\RideRequested;
+use App\Events\RideStarted;
 use App\Http\Controllers\Controller;
 use App\Models\Driver;
 use App\Models\Ride;
@@ -136,6 +137,17 @@ class RideController extends Controller
             'message' => 'Course acceptée !',
             'ride' => $ride
         ]);
+    }
+
+    // Endpoint pour les chauffeurs : Démarrer la course (passer en in_progress)
+    public function start(Ride $ride) {
+        // Passer le statut à 'in_progress'
+        $ride->update(['status' => 'in_progress']);
+
+        // Diffuser l'événement pour que le client change aussi de vue
+        event(new RideStarted($ride));
+
+        return response()->json(['success' => true, 'ride' => $ride]);
     }
 
     // Endpoint pour l'estimation de course + radar client

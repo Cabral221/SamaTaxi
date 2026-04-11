@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
-import axios from 'axios'; // Ajouté car utilisé dans handleCancelRide
+import axios from 'axios';
 
 const taxiIcon = L.icon({
     iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
@@ -15,33 +15,42 @@ function RoutingLayer({ from, to }) {
     const routingControlRef = useRef(null);
 
     useEffect(() => {
-        // Sécurité : on vérifie que la map et les coordonnées sont valides
-        if (!map || !from?.lat || !to?.lat) return;
+        // AJOUTEZ parseFloat ICI AUSSI pour éviter le bug Leaflet
+        // if (!map || !from?.lat || !from?.lng || !to?.lat || !to?.lng) return;
+        if (!map || isNaN(parseFloat(from?.lat)) || isNaN(parseFloat(to?.lat))) return;
+
+        const start = L.latLng(parseFloat(from.lat), parseFloat(from.lng));
+        const end = L.latLng(parseFloat(to.lat), parseFloat(to.lng));
 
         try {
-            const routingControl = L.Routing.control({
-                waypoints: [
-                    L.latLng(from.lat, from.lng),
-                    L.latLng(to.lat, to.lng)
-                ],
-                lineOptions: {
-                    styles: [{ color: '#2ecc71', weight: 5, opacity: 0.7 }],
-                    extendToWaypoints: false,
-                    missingRouteTolerance: 0
-                },
-                addWaypoints: false,
-                draggableWaypoints: false,
-                show: false,
-                createMarker: () => null
-            }).addTo(map);
 
-            routingControlRef.current = routingControl;
+            if (routingControlRef.current) {
+                routingControlRef.current.setWaypoints([start, end]);
+            } else {
+                routingControlRef.current = L.Routing.control({
+                    waypoints: [start,end],
+                    router: L.Routing.osrmv1({
+                        serviceUrl: 'https://router.project-osrm.org/route/v1',
+                        profile: 'driving',
+                        timeout: 30000,
+                    }),
+                    lineOptions: {
+                        styles: [{ color: '#2ecc71', weight: 5, opacity: 0.7 }],
+                        extendToWaypoints: false,
+                        missingRouteTolerance: 0
+                    },
+                    addWaypoints: false,
+                    draggableWaypoints: false,
+                    show: false,
+                    createMarker: () => null
+                }).addTo(map);
+            }
+
         } catch (err) {
             console.error("Erreur initialisation RoutingControl:", err);
         }
 
         return () => {
-            // Nettoyage sécurisé pour éviter "reading removeLayer of null"
             if (map && routingControlRef.current) {
                 try {
                     map.removeControl(routingControlRef.current);
@@ -51,9 +60,8 @@ function RoutingLayer({ from, to }) {
                 }
             }
         };
-    }, [map]); // On ne recrée le contrôle QUE si la map change
+    }, [map, from.lat, from.lng, to.lat, to.lng]);
 
-    // Effet séparé pour mettre à jour les points sans détruire/recréer le contrôle
     useEffect(() => {
         if (routingControlRef.current && from?.lat && to?.lat) {
             try {
@@ -70,8 +78,9 @@ function RoutingLayer({ from, to }) {
     return null;
 }
 
+const arrivalSound = new Audio('/sounds/ride_requested.wav');
+
 function Navigation({ ride, onCancelSuccess }) {
-    // Initialisation intelligente : on prend la position du chauffeur dans l'objet ride
     const [driverPos, setDriverPos] = useState(() => {
         if (ride.driver && ride.driver.lat && ride.driver.lng) {
             return { lat: parseFloat(ride.driver.lat), lng: parseFloat(ride.driver.lng) };
@@ -79,47 +88,52 @@ function Navigation({ ride, onCancelSuccess }) {
         return null;
     });
 
-    const [info, setInfo] = useState({ distance: '...', time: '...' });
+    const [info, setInfo] = useState({ distance: 0, time: 0 });
     const [isCancelling, setIsCancelling] = useState(false);
+    const [hasNotifiedArrival, setHasNotifiedArrival] = useState(false);
+    const [rideStatus, setRideStatus] = useState(ride.status);
 
-    // Calcul de la distance initiale dès que driverPos est connu
+    // Calcul dynamique Distance / Temps
     useEffect(() => {
-        if (driverPos && ride.pickup_lat) {
-            const p1 = L.latLng(driverPos.lat, driverPos.lng);
-            const p2 = L.latLng(ride.pickup_lat, ride.pickup_lng);
-            const dist = Math.round(p1.distanceTo(p2));
-            setInfo({
-                distance: dist,
-                time: Math.ceil(dist / 300)
-            });
-        }
-    }, [driverPos, ride.pickup_lat]);
+        if (!driverPos || !ride.pickup_lat) return;
 
-    // Écoute temps réel
+        const targetLat = rideStatus === 'in_progress' ? parseFloat(ride.destination_lat) : parseFloat(ride.pickup_lat);
+        const targetLng = rideStatus === 'in_progress' ? parseFloat(ride.destination_lng) : parseFloat(ride.pickup_lng);
+
+        if (isNaN(targetLat) || isNaN(targetLng)) return;
+
+        const p1 = L.latLng(driverPos.lat, driverPos.lng);
+        const p2 = L.latLng(targetLat, targetLng);
+        const distanceMeters = p1.distanceTo(p2);
+
+        setInfo({
+            distance: Math.round(distanceMeters),
+            time: Math.ceil(distanceMeters / 400)
+        });
+
+        if (rideStatus !== 'in_progress' && distanceMeters <= 20 && !hasNotifiedArrival) {
+            arrivalSound.play().catch(e => console.warn(e));
+            setHasNotifiedArrival(true);
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        }
+    }, [driverPos, rideStatus, ride.pickup_lat, ride.destination_lat]);
+
     useEffect(() => {
         if (!ride.id) return;
-
-        // Mise à jour du header auth pour Echo
         const token = localStorage.getItem('token');
         if (window.Echo.connector.options.auth) {
             window.Echo.connector.options.auth.headers.Authorization = `Bearer ${token}`;
         }
-
         const channel = window.Echo.private(`rides.${ride.id}`);
-        channel.listen('.driver.moved', (e) => {
-            console.log("✅ Live GPS Chauffeur :", e);
 
-            // On s'assure que les données reçues sont valides
+        channel.listen('.driver.moved', (e) => {
             if (e.lat && e.lng) {
                 setDriverPos({ lat: parseFloat(e.lat), lng: parseFloat(e.lng) });
-
-                if (e.distance_to_pickup) {
-                    setInfo({
-                        distance: Math.round(e.distance_to_pickup),
-                        time: Math.ceil(e.distance_to_pickup / 300)
-                    });
-                }
             }
+        });
+
+        channel.listen('.ride.started', (e) => {
+            setRideStatus('in_progress');
         });
 
         return () => window.Echo.leave(`rides.${ride.id}`);
@@ -138,50 +152,84 @@ function Navigation({ ride, onCancelSuccess }) {
         }
     };
 
+    // Gestion de l'affichage du prix (Fallback si ride.price est vide)
+    const displayPrice = ride.price || ride.estimated_price || "0";
+
     return (
         <div style={{ height: '100vh', width: '100%', position: 'relative' }}>
-            {/* Overlay Info */}
-            <div style={{
-                position: 'absolute', top: 20, left: 15, right: 15, zIndex: 1000,
-                background: 'white', padding: '15px', borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)', textAlign: 'center'
-            }}>
-                <h3 style={{ margin: 0 }}>Votre chauffeur arrive ! 🚕</h3>
-                <p style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '1.1em', margin: '5px 0' }}>
-                    📍 {info.distance} m ({info.time} min)
-                </p>
-                <small>Chauffeur : {ride.driver?.user?.name || "En route"}</small>
+            {hasNotifiedArrival && rideStatus !== 'in_progress' && (
+                <div style={{ position: 'absolute', top: 140, left: 20, right: 20, zIndex: 2000, background: '#2ecc71', color: 'white', padding: '15px', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
+                    ✨ VOTRE CHAUFFEUR EST ARRIVÉ ! ✨
+                </div>
+            )}
+
+            <div style={{ position: 'absolute', top: 20, left: 15, right: 15, zIndex: 1000, background: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1em' }}>
+                        {rideStatus === 'in_progress' ? "🚀 Course en cours" :
+                         hasNotifiedArrival ? "🚕 Le chauffeur vous attend" : "⏳ Chauffeur en route"}
+                    </h3>
+                </div>
+
+                <div style={{ background: rideStatus === 'in_progress' ? '#ebf5ff' : '#f1f9f4', padding: '10px', borderRadius: '8px', marginBottom: '10px', textAlign: 'center', borderLeft: `5px solid ${rideStatus === 'in_progress' ? '#3498db' : '#2ecc71'}` }}>
+                    <p style={{ color: rideStatus === 'in_progress' ? '#2980b9' : '#27ae60', fontWeight: 'bold', margin: 0 }}>
+                        {rideStatus === 'in_progress' ? "Arrivée prévue dans : " : "Le chauffeur est à : "}
+                        <br />
+                        {info.distance >= 1000 ? (info.distance / 1000).toFixed(1) + " km" : info.distance + " m"} ({info.time} min)
+                    </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.85em', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <strong>Départ :</strong> {ride.pickup_address}
+                    </div>
+                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <strong>Arrivée :</strong> {ride.destination_address}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', fontWeight: 'bold' }}>
+                        <span>Total : {ride.distance_km} km</span>
+                        <span style={{ color: '#2ecc71' }}>{displayPrice} FCFA</span>
+                    </div>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                    <small style={{ color: '#666' }}>Chauffeur : <strong>{ride.driver?.user?.name || "Assigné"}</strong></small>
+                </div>
             </div>
 
-            <MapContainer center={[ride.pickup_lat, ride.pickup_lng]} zoom={15} style={{ height: '100%', width: '100%' }}>
+            <MapContainer center={[parseFloat(ride.pickup_lat), parseFloat(ride.pickup_lng)]} zoom={15} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-                {/* Marqueur Passager (Moi) */}
-                <Marker position={[ride.pickup_lat, ride.pickup_lng]}>
-                    <Popup>Ma position</Popup>
+                <Marker position={[parseFloat(ride.pickup_lat), parseFloat(ride.pickup_lng)]}>
+                    <Popup>Départ</Popup>
                 </Marker>
 
-                {/* Marqueur Chauffeur + Tracé */}
-                {driverPos && (
+                {ride.destination_lat && ride.destination_lng && (
+                    <Marker position={[parseFloat(ride.destination_lat), parseFloat(ride.destination_lng)]}>
+                        <Popup>Arrivée</Popup>
+                    </Marker>
+                )}
+
+                {driverPos && driverPos.lat && (
                     <>
                         <Marker position={[driverPos.lat, driverPos.lng]} icon={taxiIcon} />
                         <RoutingLayer
                             from={driverPos}
-                            to={{ lat: parseFloat(ride.pickup_lat), lng: parseFloat(ride.pickup_lng) }}
+                            to={rideStatus === 'in_progress'
+                                ? { lat: parseFloat(ride.destination_lat), lng: parseFloat(ride.destination_lng) }
+                                : { lat: parseFloat(ride.pickup_lat), lng: parseFloat(ride.pickup_lng) }
+                            }
                         />
                     </>
                 )}
             </MapContainer>
 
-            {/* Bouton Annuler */}
-            <div style={{ position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: '90%' }}>
-                <button onClick={handleCancelRide} disabled={isCancelling} style={{
-                    width: '100%', padding: '15px', background: '#e74c3c', color: 'white',
-                    border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer'
-                }}>
-                    {isCancelling ? 'Annulation...' : 'ANNULER LA COURSE'}
-                </button>
-            </div>
+            {rideStatus !== 'in_progress' && (
+                <div style={{ position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: '90%' }}>
+                    <button onClick={handleCancelRide} disabled={isCancelling} style={{ width: '100%', padding: '15px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                        {isCancelling ? 'Annulation...' : 'ANNULER LA COURSE'}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

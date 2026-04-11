@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, useMap, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
+import axios from 'axios';
 
-// Icône spéciale pour le chauffeur (Taxi)
 const taxiIcon = L.icon({
     iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
     iconSize: [35, 35],
@@ -14,45 +14,114 @@ function Routing({ from, to }) {
     const map = useMap();
     const routingControlRef = useRef(null);
 
+    // 1. Initialisation unique du contrôle
     useEffect(() => {
-        if (!map || !from || !to) return;
+        if (!map) return;
 
-        const routingControl = L.Routing.control({
-            waypoints: [L.latLng(from.lat, from.lng), L.latLng(to.lat, to.lng)],
-            lineOptions: { styles: [{ color: '#F8B803', weight: 6, opacity: 0.8 }] },
-            addWaypoints: false,
-            draggableWaypoints: false,
-            fitSelectedRoutes: false, // On gère le fitBounds manuellement pour plus de contrôle
-            show: false,
-            createMarker: () => null
-        }).addTo(map);
+        try {
+            const routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(parseFloat(from.lat), parseFloat(from.lng)),
+                    L.latLng(parseFloat(to.lat), parseFloat(to.lng))
+                ],
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1',
+                    profile: 'driving',
+                    timeout: 10000, // Réduit à 10s pour plus de réactivité
+                }),
+                lineOptions: {
+                    styles: [{ color: '#F8B803', weight: 6, opacity: 0.8 }],
+                    extendToWaypoints: false,
+                    missingRouteTolerance: 0
+                },
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: false,
+                show: false,
+                createMarker: () => null // On utilise nos propres Markers React
+            }).addTo(map);
 
-        routingControlRef.current = routingControl;
+            routingControlRef.current = routingControl;
+            console.log("Routing control initialisé avec succès");
+        } catch (err) {
+            console.error("Erreur initialisation Routing:", err);
+        }
 
         return () => {
-            if (routingControlRef.current && map) map.removeControl(routingControlRef.current);
+            if (routingControlRef.current && map) {
+                try {
+                    map.removeControl(routingControlRef.current);
+                    routingControlRef.current = null;
+                } catch (e) {
+                    console.warn("Erreur lors du retrait du contrôle routing:", e);
+                }
+            }
         };
-    }, [map]);
+    }, [map]); // On ne l'initialise qu'une fois quand la map est prête
 
+    // 2. Mise à jour dynamique des waypoints quand 'from' ou 'to' changent
     useEffect(() => {
-        if (routingControlRef.current && from && to) {
-            routingControlRef.current.setWaypoints([
-                L.latLng(from.lat, from.lng),
-                L.latLng(to.lat, to.lng)
-            ]);
+        if (routingControlRef.current && from?.lat && to?.lat) {
+            const start = L.latLng(parseFloat(from.lat), parseFloat(from.lng));
+            const end = L.latLng(parseFloat(to.lat), parseFloat(to.lng));
 
-            // Centrage auto pour que le chauffeur voie toujours le client
-            const bounds = L.latLngBounds([[from.lat, from.lng], [to.lat, to.lng]]);
-            map.fitBounds(bounds, { padding: [50, 50] });
+            // Vérification anti-NaN avant de soumettre à Leaflet
+            if (!isNaN(start.lat) && !isNaN(end.lat)) {
+                routingControlRef.current.setWaypoints([start, end]);
+
+                // Ajustement automatique de la vue
+                const bounds = L.latLngBounds([start, end]);
+                map.fitBounds(bounds, { padding: [70, 70], maxZoom: 17 });
+            }
         }
-    }, [from.lat, from.lng, to.lat, to.lng]);
+    }, [from.lat, from.lng, to.lat, to.lng, map]);
 
     return null;
 }
 
 function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
-    // Si driverCoords est null au démarrage, on évite le crash
+    const [status, setStatus] = useState(ride.status);
+
+
+    // Synchronisation du statut si le parent le change
+    useEffect(() => {
+        setStatus(ride.status);
+    }, [ride.status]);
+
     if (!driverCoords) return <div style={{padding: '20px'}}>Initialisation du trajet...</div>;
+
+    const handleStartRide = async () => {
+        try {
+            const response = await axios.post(`/api/rides/${ride.id}/start`);
+            if (response.data.success) {
+                setStatus('in_progress');
+                // Optionnel : re-centrer immédiatement
+            }
+        } catch (error) {
+            console.error("Erreur démarrage:", error);
+            alert("Impossible de démarrer la course.");
+        }
+    };
+
+    // Préparation des coordonnées de destination (conversion en float par sécurité)
+    // --- LOGIQUE DE VALIDATION CORRIGÉE ---
+    const pickupCoords = {
+        lat: parseFloat(ride.pickup_lat),
+        lng: parseFloat(ride.pickup_lng)
+    };
+
+    const destCoords = {
+        lat: parseFloat(ride.destination_lat),
+        lng: parseFloat(ride.destination_lng)
+    };
+
+    const isValidPickup = !isNaN(pickupCoords.lat) && !isNaN(pickupCoords.lng);
+    const isValidDest = !isNaN(destCoords.lat) && !isNaN(destCoords.lng);
+    const isValidDriver = !isNaN(driverCoords.lat) && !isNaN(driverCoords.lng);
+
+    // Déterminer la cible actuelle du tracé
+    const currentDestination = status === 'in_progress' ? destCoords : pickupCoords;
+    const canRenderRouting = isValidDriver && (status === 'in_progress' ? isValidDest : isValidPickup);
 
     return (
         <div style={{ height: '100vh', width: '100%', position: 'relative' }}>
@@ -62,16 +131,30 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
                 borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
                 textAlign: 'center'
             }}>
-                <h4 style={{ margin: '0 0 5px 0' }}>Client : {ride.passenger?.user?.name || 'Client SamaTaxi'}</h4>
+                <h4 style={{ margin: '0 0 5px 0' }}>
+                    {status === 'in_progress' ? '🚩 En route vers la destination' : `👤 Client : ${ride.passenger?.user?.name}`}
+                </h4>
+
+                {status !== 'in_progress' && (
+                    <button onClick={handleStartRide} style={{
+                        width: '100%', padding: '15px', background: '#2ecc71', color: 'white',
+                        border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer',
+                        marginBottom: '10px', fontSize: '1.1em'
+                    }}>
+                        DÉMARRER LA COURSE
+                    </button>
+                )}
+
                 <p style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#F8B803', margin: '5px 0' }}>
-                    📍 {distanceRemaining ? `${distanceRemaining} mètres` : 'Calcul...'}
+                    📍 {distanceRemaining ? `${distanceRemaining} m` : 'Calcul...'}
                 </p>
                 <p style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', margin: '5px 0' }}>
-                    Prix : {ride.estimated_price} FCFA
+                    Prix : {ride.estimated_price || ride.price} FCFA
                 </p>
+
                 <button onClick={onCancel} style={{
                     background: '#ff4d4d', color: 'white', border: 'none',
-                    padding: '12px', borderRadius: '8px', width: '100%', fontWeight: 'bold', cursor: 'pointer'
+                    padding: '12px', borderRadius: '8px', width: '100%', fontWeight: 'bold', cursor: 'pointer', marginTop: '5px'
                 }}>
                     Annuler la course
                 </button>
@@ -79,13 +162,33 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
 
             <MapContainer center={[driverCoords.lat, driverCoords.lng]} zoom={16} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
                 <Marker position={[driverCoords.lat, driverCoords.lng]} icon={taxiIcon}>
-                    <Popup>Vous êtes ici</Popup>
+                    <Popup>Votre position</Popup>
                 </Marker>
-                <Marker position={[ride.pickup_lat, ride.pickup_lng]}>
-                    <Popup>Point de prise en charge</Popup>
-                </Marker>
-                <Routing from={driverCoords} to={{ lat: ride.pickup_lat, lng: ride.pickup_lng }} />
+
+                {/* Marqueur du client (seulement si pas encore démarré) */}
+                {status !== 'in_progress' && isValidPickup && (
+                    <Marker position={[pickupCoords.lat, pickupCoords.lng]}>
+                        <Popup>Point de prise en charge</Popup>
+                    </Marker>
+                )}
+
+                {/* Marqueur destination (si démarré) */}
+                {status === 'in_progress' && isValidDest && (
+                    <Marker position={[destCoords.lat, destCoords.lng]}>
+                        <Popup>Destination finale</Popup>
+                    </Marker>
+                )}
+
+                {/* Le Routing doit aussi recevoir les objets nettoyés */}
+                {/* APPEL DU ROUTING AVEC LA NOUVELLE CONDITION */}
+                {canRenderRouting && (
+                    <Routing
+                        from={driverCoords}
+                        to={currentDestination}
+                    />
+                )}
             </MapContainer>
         </div>
     );

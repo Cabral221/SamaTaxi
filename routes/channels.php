@@ -8,16 +8,15 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('rides.{rideId}', function ($user, $rideId) {
-    // $ride = Ride::find($rideId);
+    $ride = Ride::find($rideId);
 
-    // if (!$ride) return false;
+    if (!$ride) return false;
 
-    // Seul le passager qui a créé la course ou le chauffeur assigné peut écouter
-    // return (int) $user->passenger?->id === (int) $ride->passenger_id ||
-    //        (int) $user->driver?->id === (int) $ride->driver_id;
+    // Récupération des IDs liés à l'utilisateur connecté
+    $passengerId = $user->passenger?->id;
+    $driverId = $user->driver?->id;
 
-    return true;
-
-    // Pour le test, on autorise tout utilisateur connecté
-    // return auth()->check();
+    // Autoriser si l'utilisateur est le passager OU le chauffeur de cette course
+    return (int) $passengerId === (int) $ride->passenger_id ||
+           (int) $driverId === (int) $ride->driver_id;
 });

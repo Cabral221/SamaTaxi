@@ -13,13 +13,14 @@ Route::post('/login', [AuthController::class, 'login']);
 // --- Routes Protégées (Nécessitent un Token) ---
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-    
+
     Route::get('/rides/estimate', [RideController::class, 'estimate']);
 
     // Routes spécifiques aux chauffeurs*
     Route::post('/driver/location', [DriverController::class, 'updateLocation']);
     Route::get('/drivers/available-rides', [RideController::class, 'availableRides']);
     Route::post('/rides/{id}/accept', [RideController::class, 'acceptRide']);
+    Route::post('/rides/{ride}/start', [RideController::class, 'start']);
     Route::post('/rides/{id}/cancel', [RideController::class, 'cancel']);
 
     // Route pour créer une course
