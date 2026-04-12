@@ -29,8 +29,10 @@ return new class extends Migration
 
             $table->decimal('estimated_price', 10, 2);
             $table->decimal('final_price', 10, 2)->nullable();
+            $table->timestamp('accepted_at')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
             $table->timestamps();
         });
     }

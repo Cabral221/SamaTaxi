@@ -109,14 +109,18 @@ class RideController extends Controller
             return response()->json(['message' => 'Accès refusé'], 403);
         }
         // Optionnel : On peut aussi mettre à jour le statut du chauffeur pour qu'il n'apparaisse plus dans les recherches
-        $driver->update(['status' => 'busy']);
+        $driver->update([
+            'status' => 'busy',
+            'accepted_at' => now() // Nouvelle colonne pour suivre quand le chauffeur a accepté une course
+        ]);
 
         // Mise à jour du statut
         $updated = Ride::where('id', $id)
             ->where('status', 'requested')
             ->update([
                 'driver_id' => $driver->id,
-                'status' => 'accepted'
+                'status' => 'accepted',
+                'accepted_at' => now()
             ]);
 
         if (!$updated) {
@@ -147,7 +151,10 @@ class RideController extends Controller
     public function start(Ride $ride)
     {
         // Passer le statut à 'in_progress'
-        $ride->update(['status' => 'in_progress']);
+        $ride->update([
+            'status' => 'in_progress',
+            'started_at' => now()
+        ]);
         $ride->refresh(); // On recharge pour être sûr d'avoir les dernières données
 
         // Diffuser l'événement pour que le client change aussi de vue
@@ -213,7 +220,10 @@ class RideController extends Controller
             return response()->json(['message' => 'Impossible d\'annuler une course terminée'], 400);
         }
 
-        $ride->update(['status' => 'cancelled']);
+        $ride->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now()
+        ]);
 
         // TODO : Émettre un événement RideCancelled pour prévenir le chauffeur
         // event(new RideCancelled($ride));
