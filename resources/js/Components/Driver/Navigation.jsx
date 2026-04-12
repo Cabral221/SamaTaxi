@@ -146,7 +146,10 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
                 )}
 
                 <p style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#F8B803', margin: '5px 0' }}>
-                    📍 {distanceRemaining ? `${distanceRemaining} m` : 'Calcul...'}
+                    📍 {distanceRemaining
+                            ? (distanceRemaining > 1000 ? `${(distanceRemaining / 1000).toFixed(1)} km` : `${distanceRemaining} m`)
+                            : 'Calcul...'
+                        }
                 </p>
                 <p style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', margin: '5px 0' }}>
                     Prix : {ride.estimated_price || ride.price} FCFA
