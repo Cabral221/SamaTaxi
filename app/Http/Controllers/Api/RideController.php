@@ -8,7 +8,6 @@ use App\Events\RideStarted;
 use App\Http\Controllers\Controller;
 use App\Models\Driver;
 use App\Models\Ride;
-// use App\Events\RideCancelled;
 use App\Services\RideService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -149,6 +148,7 @@ class RideController extends Controller
     {
         // Passer le statut à 'in_progress'
         $ride->update(['status' => 'in_progress']);
+        $ride->refresh(); // On recharge pour être sûr d'avoir les dernières données
 
         // Diffuser l'événement pour que le client change aussi de vue
         event(new RideStarted($ride));

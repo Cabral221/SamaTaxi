@@ -18,7 +18,7 @@ class DriverController extends Controller
         ]);
 
         $driver = auth()->user()->driver;
-        
+
         if (!$driver) {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
@@ -37,12 +37,12 @@ class DriverController extends Controller
 
         // 2. Logique liée à la course active
         $activeRide = Ride::where('driver_id', $driver->id)
-            ->whereIn('status', ['accepted', 'arrived'])
+            ->whereIn('status', ['accepted', 'in_progress']) // Courses actives
             ->first();
 
         if ($activeRide) {
             // Distance pour le chauffeur (calculée via ton modèle Ride)
-            $distance = $activeRide->getDistanceToPickup($request->lat, $request->lng);
+            $distance = $activeRide->getDistance($request->lat, $request->lng);
 
             $response['active_ride_context'] = [
                 'distance_to_pickup' => round($distance),

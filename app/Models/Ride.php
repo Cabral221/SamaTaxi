@@ -53,14 +53,15 @@ class Ride extends Model
     /**
      * Calcule la distance entre un point GPS et le pickup_location de CETTE course
      */
-    public function getDistanceToPickup($lat, $lng) {
+    public function getDistance($lat, $lng) {
         // On passe $this->pickup_location en paramètre pour que SQL sache quoi comparer
+        // on capte le status pour savoir si on doit comparer à la destination ou au pickup
         $result = DB::select("
             SELECT ST_Distance(
                 ST_GeomFromText('POINT($lng $lat)', 4326)::geography,
                 ?::geography
             ) as distance_meters",
-            [$this->pickup_location] // On injecte la donnée de l'instance actuelle
+            [$this->status === 'in_progress' ? $this->destination_location : $this->pickup_location] // On injecte la donnée de l'instance actuelle
         );
 
         return $result[0]->distance_meters ?? 999999;

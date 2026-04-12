@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('driver_id')->nullable()->constrained('drivers')->onDelete('set null');
 
             // Statuts : requested, accepted, ongoing, completed, cancelled
-            $table->string('status')->default('requested');
+            $table->enum('status', ['requested', 'accepted', 'in_progress', 'completed', 'cancelled'])->default('requested');
 
             $table->string('pickup_address')->nullable();
             $table->string('destination_address')->nullable();
