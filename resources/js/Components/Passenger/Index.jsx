@@ -69,7 +69,10 @@ function Index() {
             {!currentRide ? (
                 <OrderForm onOrderCreated={handleNewOrder} />
             ) : (
-                <Navigation ride={currentRide} onCancelSuccess={() => setCurrentRide(null)} />
+                <Navigation ride={currentRide}
+                    onCancelSuccess={() => setCurrentRide(null)}
+                    onCompleted={() => setCurrentRide(null)}
+                />
             )}
         </div>
     );

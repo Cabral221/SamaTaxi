@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/drivers/available-rides', [RideController::class, 'availableRides']);
     Route::post('/rides/{id}/accept', [RideController::class, 'acceptRide']);
     Route::post('/rides/{ride}/start', [RideController::class, 'start']);
+    Route::post('/rides/{ride}/complete', [RideController::class, 'completeRide']);
     Route::post('/rides/{id}/cancel', [RideController::class, 'cancel']);
 
     // Route pour créer une course

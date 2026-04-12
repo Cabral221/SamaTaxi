@@ -103,6 +103,25 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
         }
     };
 
+    const handleCompleteRide = async () => {
+        console.log('Boutton terminier cliquer !');
+
+        // if (!window.confirm("Le passager est-il bien arrivé ?")) return;
+        try {
+            const response = await axios.post(`/api/rides/${ride.id}/complete`);
+            if (response.data.success) {
+                setStatus('completed');
+                console.log("Course terminée.", response.data);
+                // Très important : On réinitialise l'état pour que le chauffeur
+                // revienne sur la vue Radar et puisse reprendre une course
+                window.location.reload(); // Ou une fonction onFinish() passée par le Radar
+            }
+        } catch (error) {
+            console.error("Erreur clôture:", error);
+            alert("Une erreur est survenue lors de la clôture.");
+        }
+    };
+
     // Préparation des coordonnées de destination (conversion en float par sécurité)
     // --- LOGIQUE DE VALIDATION CORRIGÉE ---
     const pickupCoords = {
@@ -135,13 +154,22 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
                     {status === 'in_progress' ? '🚩 En route vers la destination' : `👤 Client : ${ride.passenger?.user?.name}`}
                 </h4>
 
-                {status !== 'in_progress' && (
+                {/* BOUTONS DYNAMIQUES */}
+                {status !== 'in_progress' ? (
                     <button onClick={handleStartRide} style={{
                         width: '100%', padding: '15px', background: '#2ecc71', color: 'white',
                         border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer',
                         marginBottom: '10px', fontSize: '1.1em'
                     }}>
                         DÉMARRER LA COURSE
+                    </button>
+                ) : (
+                    <button onClick={handleCompleteRide} style={{
+                        width: '100%', padding: '15px', background: '#3498db', color: 'white',
+                        border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer',
+                        marginBottom: '10px', fontSize: '1.1em'
+                    }}>
+                        TERMINER LA COURSE
                     </button>
                 )}
 

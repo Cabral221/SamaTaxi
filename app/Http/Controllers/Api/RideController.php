@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\RideAccepted;
+use App\Events\RideCompleted;
 use App\Events\RideRequested;
 use App\Events\RideStarted;
 use App\Http\Controllers\Controller;
@@ -109,10 +110,7 @@ class RideController extends Controller
             return response()->json(['message' => 'Accès refusé'], 403);
         }
         // Optionnel : On peut aussi mettre à jour le statut du chauffeur pour qu'il n'apparaisse plus dans les recherches
-        $driver->update([
-            'status' => 'busy',
-            'accepted_at' => now() // Nouvelle colonne pour suivre quand le chauffeur a accepté une course
-        ]);
+        $driver->update(['status' => 'busy']);
 
         // Mise à jour du statut
         $updated = Ride::where('id', $id)
@@ -161,6 +159,37 @@ class RideController extends Controller
         event(new RideStarted($ride));
 
         return response()->json(['success' => true, 'ride' => $ride]);
+    }
+
+    public function completeRide(Ride $ride)
+    {
+        // 1. Vérification de sécurité
+        // Seul le chauffeur assigné à cette course peut la terminer
+        if ($ride->driver_id !== auth()->user()->driver->id) {
+            return response()->json(['message' => 'Action non autorisée'], 403);
+        }
+
+        // 2. Mise à jour de la course
+        $ride->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'final_price' => $ride->estimated_price // Pour l'instant on garde le prix estimé
+        ]);
+
+        // 3. Libération du chauffeur
+        // On repasse son statut à 'available' pour qu'il reçoive de nouvelles courses
+        $ride->driver->update(['status' => 'available']);
+        $ride->refresh();
+
+        // 4. Notification (Optionnel)
+        // On peut émettre un événement pour que le passager reçoive un reçu ou une alerte
+        event(new RideCompleted($ride));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Course terminée. Merci !',
+            'ride' => $ride
+        ]);
     }
 
     // Endpoint pour l'estimation de course + radar client

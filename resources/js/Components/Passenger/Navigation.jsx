@@ -78,7 +78,7 @@ function RoutingLayer({ from, to }) {
     return null;
 }
 
-function Navigation({ ride, onCancelSuccess }) {
+function Navigation({ ride, onCancelSuccess, onCompleted }) {
     const [driverPos, setDriverPos] = useState(() => {
         if (ride.driver && ride.driver.lat && ride.driver.lng) {
             return { lat: parseFloat(ride.driver.lat), lng: parseFloat(ride.driver.lng) };
@@ -119,14 +119,26 @@ function Navigation({ ride, onCancelSuccess }) {
         }
         const channel = window.Echo.private(`rides.${ride.id}`);
 
+        //Ecoute les mouvements du chauffeur pour mettre à jour sa position en temps réel
         channel.listen('.driver.moved', (e) => {
             if (e.lat && e.lng) {
                 setDriverPos({ lat: parseFloat(e.lat), lng: parseFloat(e.lng) });
             }
         });
 
+        // Ecoute la notification de démarrage de la course
         channel.listen('.ride.started', (e) => {
             setRideStatus('in_progress');
+        });
+
+        // Ecoute la notification d'arrivée à destination du chauffeur
+        channel.listen('.ride.completed', (e) => {
+            setRideStatus('completed');
+            console.log("🏁 Course terminée !", e);
+            alert("Vous êtes arrivé à destination. Merci d'avoir choisi SamaTaxi !");
+            // C'est ici que tu "décroches" le client
+            // En appelant une fonction passée en props par le parent (ex: App.js ou Home.js)
+            onCompleted();
         });
 
         return () => window.Echo.leave(`rides.${ride.id}`);
