@@ -27,6 +27,8 @@ return new class extends Migration
             $table->geography('destination_location', 'point', 4326);
             $table->decimal('distance_km', 8, 2)->nullable();
 
+            $table->foreignId('cancelled_by')->nullable()->constrained('users')->onDelete('set null');
+
             $table->decimal('estimated_price', 10, 2);
             $table->decimal('final_price', 10, 2)->nullable();
             $table->timestamp('accepted_at')->nullable();

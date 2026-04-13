@@ -88,6 +88,23 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
         setStatus(ride.status);
     }, [ride.status]);
 
+    useEffect(() => {
+        // On écoute le canal spécifique de la course
+        const channel = window.Echo.private(`rides.${ride.id}`);
+
+        // Ecoute la notification d'annulation de la course
+        channel.listen('.ride.canceled', (e) => {
+            console.log("❌ Course annulée par :", e.canceledBy);
+
+            if(e.canceledBy === 'passenger') {
+                alert("Le passager a annulé la course. Veuillez nous excuser.");
+                onCancel();
+            }
+        });
+
+        return () => window.Echo.leave(`rides.${ride.id}`);
+    }, [ride.id]);
+
     if (!driverCoords) return <div style={{padding: '20px'}}>Initialisation du trajet...</div>;
 
     const handleStartRide = async () => {
@@ -121,6 +138,23 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
             alert("Une erreur est survenue lors de la clôture.");
         }
     };
+
+    const handleCancelRide = async (e) => {
+        console.log("❌ Course annulée par :", e.canceledBy);
+
+        if (!window.confirm("Voulez-vous vraiment annuler votre course ?")) return;
+
+        try {
+            const response = await axios.post(`/api/rides/${ride.id}/cancel`);
+            if (response.data.success) {
+                onCancel();
+            }
+        } catch (error) {
+            alert("Erreur lors de l'annulation.");
+        } finally {
+            setIsCancelling(false);
+        }
+    }
 
     // Préparation des coordonnées de destination (conversion en float par sécurité)
     // --- LOGIQUE DE VALIDATION CORRIGÉE ---
@@ -183,7 +217,7 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
                     Prix : {ride.estimated_price || ride.price} FCFA
                 </p>
 
-                <button onClick={onCancel} style={{
+                <button onClick={handleCancelRide} style={{
                     background: '#ff4d4d', color: 'white', border: 'none',
                     padding: '12px', borderRadius: '8px', width: '100%', fontWeight: 'bold', cursor: 'pointer', marginTop: '5px'
                 }}>

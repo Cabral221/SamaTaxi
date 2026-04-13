@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\RideAccepted;
+use App\Events\RideCancelled;
 use App\Events\RideCompleted;
 use App\Events\RideRequested;
 use App\Events\RideStarted;
@@ -239,27 +240,35 @@ class RideController extends Controller
         ]);
     }
 
-    public function cancel($id)
+    public function cancelRide(Request $request, Ride $ride)
     {
-        $ride = Ride::find($id);
+        $user = auth()->user();
+        // 1. Vérification : l'utilisateur est-il lié à la course ?
+        $isDriver = ($user->driver && $ride->driver_id === $user->driver->id);
+        $isPassenger = ($user->passenger && $ride->passenger_id === $user->passenger->id);
 
-        // Sécurité : Seul le passager ou le chauffeur peut annuler
-        // Et on ne peut annuler que si la course n'est pas déjà terminée
-        if ($ride->status === 'completed') {
-            return response()->json(['message' => 'Impossible d\'annuler une course terminée'], 400);
+        if (!$isDriver && !$isPassenger) {
+            return response()->json(['message' => 'Non autorisé'], 403);
         }
-
+        // 2. Mise à jour de la course
         $ride->update([
             'status' => 'cancelled',
-            'cancelled_at' => now()
+            'cancelled_by' => $user->id, // On stocke l'ID de l'USER
+            'completed_at' => now()
         ]);
-
-        // TODO : Émettre un événement RideCancelled pour prévenir le chauffeur
-        // event(new RideCancelled($ride));
+        // 3. Libérer le chauffeur si nécessaire
+        if ($ride->driver) {
+            $ride->driver->update(['status' => 'available']);
+        }
+        // 4. Déterminer le rôle pour l'événement (pour l'UI React)
+        $role = $isDriver ? 'driver' : 'passenger';
+        // 🔥 Diffusion de l'annulation
+        event(new RideCancelled($ride, $role));
 
         return response()->json([
             'success' => true,
-            'message' => 'Course annulée avec succès'
+            'message' => 'Course annulée',
+            'canceled_by' => $role
         ]);
     }
 

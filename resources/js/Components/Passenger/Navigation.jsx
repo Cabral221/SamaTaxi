@@ -141,6 +141,24 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
             onCompleted();
         });
 
+        // Ecoute la notification d'annulation de la course
+        channel.listen('.ride.canceled', (e) => {
+            console.log("❌ Course annulée par :", e.canceledBy);
+
+            const message = e.canceledBy === 'driver'
+                ? "Le chauffeur a dû annuler la course. Veuillez nous excuser."
+                : "Course annulée.";
+
+
+            // Appeler la fonction de sortie passée en props (onRideFinished ou onCancelSuccess)
+            if (typeof onCancelSuccess === 'function') {
+                alert(message);
+                onCancelSuccess();
+            } else {
+                window.location.href = '/';
+            }
+        });
+
         return () => window.Echo.leave(`rides.${ride.id}`);
     }, [ride.id]);
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Driver;
 use App\Models\Passenger;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -19,8 +20,11 @@ class Ride extends Model
         'destination_location',
         'estimated_price',
         'distance_km',
+        'cancelled_by',
+        'accepted_at',
         'started_at',
-        'completed_at'
+        'completed_at',
+        'cancelled_at'
     ];
 
     protected $appends = [
@@ -79,6 +83,11 @@ class Ride extends Model
     public function driver()
     {
         return $this->belongsTo(Driver::class, 'driver_id');
+    }
+
+    public function canceller()
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     /**
