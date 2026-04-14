@@ -66,6 +66,31 @@ class RideController extends Controller
         ], 201);
     }
 
+    // Endpoint pour vérifier s'il y a une course active pour le chauffeur ou le passager connecté
+    public function current(Request $request)
+    {
+        $user = auth()->user();
+        $ride = null;
+
+        if ($user->driver) {
+            // Pour le chauffeur : course acceptée ou en cours
+            $ride = Ride::where('driver_id', $user->driver->id)
+                ->whereIn('status', ['accepted', 'in_progress'])
+                ->with(['passenger.user'])
+                ->first();
+        } else {
+            // Pour le passager : en attente, acceptée ou en cours
+            $ride = Ride::where('passenger_id', $user->passenger->id)
+                ->whereIn('status', ['requested', 'accepted', 'in_progress'])
+                ->with(['driver.user'])
+                ->first();
+        }
+
+        return response()->json([
+            'ride' => $ride
+        ]);
+    }
+
     // Endpoint pour les chauffeurs : Voir les courses disponibles à proximité
     public function availableRides(Request $request)
     {

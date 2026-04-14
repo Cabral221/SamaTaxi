@@ -81,6 +81,7 @@ function Routing({ from, to }) {
 
 function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
     const [status, setStatus] = useState(ride.status);
+    const [isLoading, setIsLoading] = useState(false);
 
 
     // Synchronisation du statut si le parent le change
@@ -105,9 +106,8 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
         return () => window.Echo.leave(`rides.${ride.id}`);
     }, [ride.id]);
 
-    if (!driverCoords) return <div style={{padding: '20px'}}>Initialisation du trajet...</div>;
-
     const handleStartRide = async () => {
+        setIsLoading(true);
         try {
             const response = await axios.post(`/api/rides/${ride.id}/start`);
             if (response.data.success) {
@@ -117,6 +117,8 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
         } catch (error) {
             console.error("Erreur démarrage:", error);
             alert("Impossible de démarrer la course.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -124,6 +126,7 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
         console.log('Boutton terminier cliquer !');
 
         // if (!window.confirm("Le passager est-il bien arrivé ?")) return;
+        setIsLoading(true);
         try {
             const response = await axios.post(`/api/rides/${ride.id}/complete`);
             if (response.data.success) {
@@ -136,6 +139,8 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
         } catch (error) {
             console.error("Erreur clôture:", error);
             alert("Une erreur est survenue lors de la clôture.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -143,7 +148,7 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
         console.log("❌ Course annulée par :", e.canceledBy);
 
         if (!window.confirm("Voulez-vous vraiment annuler votre course ?")) return;
-
+        setIsLoading(true);
         try {
             const response = await axios.post(`/api/rides/${ride.id}/cancel`);
             if (response.data.success) {
@@ -152,7 +157,7 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
         } catch (error) {
             alert("Erreur lors de l'annulation.");
         } finally {
-            setIsCancelling(false);
+            setIsLoading(false);
         }
     }
 
@@ -175,6 +180,15 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
     // Déterminer la cible actuelle du tracé
     const currentDestination = status === 'in_progress' ? destCoords : pickupCoords;
     const canRenderRouting = isValidDriver && (status === 'in_progress' ? isValidDest : isValidPickup);
+
+    if (!driverCoords || isLoading) {
+        return (
+            <div className="loader-container">
+                <div className="loader"></div>
+                <p>Chargement de votre position...</p>
+            </div>
+        );
+    }
 
     return (
         <div style={{ height: '100vh', width: '100%', position: 'relative' }}>

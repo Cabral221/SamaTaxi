@@ -23,7 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/rides/{ride}/start', [RideController::class, 'start']);
     Route::post('/rides/{ride}/complete', [RideController::class, 'completeRide']);
     Route::post('/rides/{ride}/cancel', [RideController::class, 'cancelRide']);
-
+    Route::get('/rides/current', [RideController::class, 'current']);
     // Route pour créer une course
     Route::post('/rides', [RideController::class, 'store']);
 
