@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('driver_id')->nullable()->constrained('drivers')->onDelete('set null');
 
             // Statuts : requested, accepted, ongoing, completed, cancelled
-            $table->string('status')->default('requested');
+            $table->enum('status', ['requested', 'accepted', 'in_progress', 'completed', 'cancelled'])->default('requested');
 
             $table->string('pickup_address')->nullable();
             $table->string('destination_address')->nullable();
@@ -27,10 +27,14 @@ return new class extends Migration
             $table->geography('destination_location', 'point', 4326);
             $table->decimal('distance_km', 8, 2)->nullable();
 
+            $table->foreignId('cancelled_by')->nullable()->constrained('users')->onDelete('set null');
+
             $table->decimal('estimated_price', 10, 2);
             $table->decimal('final_price', 10, 2)->nullable();
+            $table->timestamp('accepted_at')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
             $table->timestamps();
         });
     }

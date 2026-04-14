@@ -22,7 +22,14 @@ function AppLayout({ children }) {
 
     console.log("Utilisateur connecté :", user);
 
-    if (loading) return <div>Chargement de SamaTaxi...</div>;
+    if (loading){
+        return (
+            <div className="loader-container">
+                <div className="loader"></div>
+                <p>Synchronisation de votre session...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-100">

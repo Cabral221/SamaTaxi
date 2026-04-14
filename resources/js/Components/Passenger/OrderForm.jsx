@@ -1,27 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
-// 1. Fonction pour récupérer l'estimation officielle du serveur
-const getServerEstimation = async (distance) => {
-    try {
-        const response = await axios.get('/api/rides/estimate', {
-            params: {
-                distance_km: distance / 1000,
-                lat: points.pickup.lat,
-                lng: points.pickup.lng
-            }
-        });
-        if (response.data.success) {
-            setDetails({
-                distance: distance,
-                price: response.data.estimation.price // Le prix vient du Laravel !
-            });
-        }
-    } catch (error) {
-        alert(error.response?.data?.message || "Erreur d'estimation");
-    }
-};
-
+import L from 'leaflet'; // Import pour utiliser la fonction de distance
 
 function OrderForm({ onOrderCreated }) {
     const [points, setPoints] = useState({
@@ -31,8 +10,8 @@ function OrderForm({ onOrderCreated }) {
     const [details, setDetails] = useState({ distance: 0, price: 0 });
     const [loading, setLoading] = useState(false);
 
-    // DEPLACE LA FONCTION ICI pour qu'elle accède aux "points"
     const getServerEstimation = async (distance) => {
+        if (!points.pickup.lat) return;
         try {
             const response = await axios.get('/api/rides/estimate', {
                 params: {
@@ -53,7 +32,7 @@ function OrderForm({ onOrderCreated }) {
     };
 
     const searchAddress = async (type, query) => {
-        if (query.length < 3) return;
+        if (!query || query.length < 3) return;
         try {
             const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
             if (res.data[0]) {
@@ -67,15 +46,20 @@ function OrderForm({ onOrderCreated }) {
     };
 
     useEffect(() => {
-        // On ne lance l'estimation QUE si on a les deux points
+        // Calcul réel dès qu'on a les deux points
         if (points.pickup.lat && points.destination.lat) {
-            const simulatedDistance = 5000;
-            getServerEstimation(simulatedDistance);
+            const p1 = L.latLng(points.pickup.lat, points.pickup.lng);
+            const p2 = L.latLng(points.destination.lat, points.destination.lng);
+
+            // On calcule la distance "à vol d'oiseau" (ou via OSRM si tu veux être précis)
+            // Ici distanceTo donne des mètres
+            const realDistance = Math.round(p1.distanceTo(p2) * 1.2); // * 1.2 pour simuler les virages des rues
+
+            getServerEstimation(realDistance);
         }
-    }, [points.pickup.lat, points.destination.lat]);
+    }, [points.pickup.lat, points.pickup.lng, points.destination.lat, points.destination.lng]);
 
     const handleOrder = () => {
-        // SECURITE : On vérifie si le prix est chargé avant d'envoyer
         if (details.price === 0) {
             alert("Veuillez attendre l'estimation du prix...");
             return;
@@ -93,6 +77,8 @@ function OrderForm({ onOrderCreated }) {
             distance_km: details.distance / 1000
         }).then(res => {
             onOrderCreated(res.data.ride);
+        }).catch(err => {
+            alert("Erreur lors de la commande.");
         }).finally(() => setLoading(false));
     };
 
@@ -103,7 +89,7 @@ function OrderForm({ onOrderCreated }) {
             <div style={{ marginBottom: '15px' }}>
                 <input
                     type="text"
-                    placeholder="Lieu de départ (ex: Dakar Plateau)"
+                    placeholder="Lieu de départ"
                     onBlur={(e) => searchAddress('pickup', e.target.value)}
                     style={inputStyle}
                 />
@@ -112,27 +98,26 @@ function OrderForm({ onOrderCreated }) {
             <div style={{ marginBottom: '15px' }}>
                 <input
                     type="text"
-                    placeholder="Destination (ex: Almadies)"
+                    placeholder="Destination"
                     onBlur={(e) => searchAddress('destination', e.target.value)}
                     style={inputStyle}
                 />
             </div>
 
-            {/* AFFICHER LE PRIX SEULEMENT S'IL EST > 0 */}
             {details.price > 0 && (
                 <div style={infoBoxStyle}>
-                    <p>Distance estimée : <strong>{(details.distance / 1000).toFixed(1)} km</strong></p>
-                    <p>Prix estimé : <strong style={{ color: '#27ae60', fontSize: '1.2em' }}>{details.price} FCFA</strong></p>
+                    <p>Distance : <strong>{(details.distance / 1000).toFixed(1)} km</strong></p>
+                    <p>Prix : <strong style={{ color: '#27ae60', fontSize: '1.2em' }}>{details.price} FCFA</strong></p>
                 </div>
             )}
 
             <button
                 onClick={handleOrder}
-                // LE BOUTON RESTE GRIS TANT QUE LE PRIX N'EST PAS ARRIVÉ DU SERVEUR
                 disabled={!points.destination.lat || details.price === 0 || loading}
                 style={{
                     ...buttonStyle,
-                    background: (points.destination.lat && details.price > 0) ? '#2ecc71' : '#bdc3c7'
+                    backgroundColor: (points.destination.lat && details.price > 0) ? '#2ecc71' : '#bdc3c7',
+                    color: 'white'
                 }}
             >
                 {loading ? 'Recherche de chauffeur...' : 'COMMANDER MAINTENANT'}
@@ -141,9 +126,8 @@ function OrderForm({ onOrderCreated }) {
     );
 }
 
-// Styles rapides pour l'ergonomie
 const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' };
 const infoBoxStyle = { background: '#fff', padding: '10px', borderRadius: '8px', marginBottom: '15px', borderLeft: '5px solid #2ecc71' };
-const buttonStyle = { width: '100%', padding: '15px', color: '#white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' };
+const buttonStyle = { width: '100%', padding: '15px', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' };
 
 export default OrderForm;

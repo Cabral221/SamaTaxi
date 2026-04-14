@@ -148,6 +148,34 @@ function Radar({ user }) {
         return () => window.Echo.leave('available-rides');
     }, [coords, user]);
 
+    useEffect(() => {
+            const checkActiveRide = async () => {
+                setLoading(true);
+                try {
+                    const response = await axios.get('/api/rides/current');
+                    if (response.data.ride) {
+                        setActiveRide(response.data.ride);
+
+                        // Si la course est encore en attente, on active la vue recherche
+                        if (response.data.ride.status === 'accepted') {
+                            // console.log("isSearching :", isSearching);
+                            console.log("accepted Etat :", response.data.ride);
+                            // setIsSearching(true);
+                            // console.log("isSearching Bas :", isSearching);
+                        } else if (response.data.ride.status === 'in_progress') {
+                            console.log("in_progress Etat :", response.data.ride);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Erreur lors de la récupération de la course active", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            checkActiveRide();
+        }, []);
+
     // Action pour accepter une course
     const handleAccept = async (rideId) => {
         try {
@@ -173,8 +201,14 @@ function Radar({ user }) {
     }
 
 
-    if (!coords) return <div>Activation du GPS SamaTaxi...</div>;
-    if (loading) return <div>Recherche des clients à proximité...</div>;
+    if (loading || !coords) {
+        return (
+            <div className="loader-container">
+                <div className="loader"></div>
+                <p>Chargement de votre position...</p>
+            </div>
+        );
+    }
 
     return (
         <div style={{ padding: '20px', background: '#f0f0f0', borderRadius: '8px' }}>

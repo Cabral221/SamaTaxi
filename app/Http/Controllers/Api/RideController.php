@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\RideAccepted;
+use App\Events\RideCancelled;
+use App\Events\RideCompleted;
 use App\Events\RideRequested;
+use App\Events\RideStarted;
 use App\Http\Controllers\Controller;
 use App\Models\Driver;
 use App\Models\Ride;
@@ -63,6 +66,31 @@ class RideController extends Controller
         ], 201);
     }
 
+    // Endpoint pour vérifier s'il y a une course active pour le chauffeur ou le passager connecté
+    public function current(Request $request)
+    {
+        $user = auth()->user();
+        $ride = null;
+
+        if ($user->driver) {
+            // Pour le chauffeur : course acceptée ou en cours
+            $ride = Ride::where('driver_id', $user->driver->id)
+                ->whereIn('status', ['accepted', 'in_progress'])
+                ->with(['passenger.user'])
+                ->first();
+        } else {
+            // Pour le passager : en attente, acceptée ou en cours
+            $ride = Ride::where('passenger_id', $user->passenger->id)
+                ->whereIn('status', ['requested', 'accepted', 'in_progress'])
+                ->with(['driver.user'])
+                ->first();
+        }
+
+        return response()->json([
+            'ride' => $ride
+        ]);
+    }
+
     // Endpoint pour les chauffeurs : Voir les courses disponibles à proximité
     public function availableRides(Request $request)
     {
@@ -79,11 +107,15 @@ class RideController extends Controller
         // On définit le point géographique une seule fois pour plus de clarté
         // Note le ::geography à la fin de la chaîne SQL pour forcer le type géographique et éviter les erreurs de distance
         $driverPoint = "ST_GeomFromText('POINT($lng $lat)', 4326)::geography";
+
         $rides = Ride::with('passenger.user') // Ajout de la relation pour avoir le nom du client dans le radar
             ->where('status', 'requested')
             ->whereNull('driver_id')
             ->whereRaw("ST_Distance($driverPoint, pickup_location) <= ?", [$radius])
             ->select('*')
+            // Optimisation : On récupère les points en texte pour éviter les requêtes N+1 des accesseurs
+            ->selectRaw("ST_AsText(pickup_location) as pickup_wkt")
+            ->selectRaw("ST_AsText(destination_location) as destination_wkt")
             ->selectRaw("ST_Distance($driverPoint, pickup_location) as distance_to_pickup")
             ->orderBy('distance_to_pickup')
             ->get();
@@ -111,7 +143,8 @@ class RideController extends Controller
             ->where('status', 'requested')
             ->update([
                 'driver_id' => $driver->id,
-                'status' => 'accepted'
+                'status' => 'accepted',
+                'accepted_at' => now()
             ]);
 
         if (!$updated) {
@@ -134,6 +167,53 @@ class RideController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Course acceptée !',
+            'ride' => $ride
+        ]);
+    }
+
+    // Endpoint pour les chauffeurs : Démarrer la course (passer en in_progress)
+    public function start(Ride $ride)
+    {
+        // Passer le statut à 'in_progress'
+        $ride->update([
+            'status' => 'in_progress',
+            'started_at' => now()
+        ]);
+        $ride->refresh(); // On recharge pour être sûr d'avoir les dernières données
+
+        // Diffuser l'événement pour que le client change aussi de vue
+        event(new RideStarted($ride));
+
+        return response()->json(['success' => true, 'ride' => $ride]);
+    }
+
+    public function completeRide(Ride $ride)
+    {
+        // 1. Vérification de sécurité
+        // Seul le chauffeur assigné à cette course peut la terminer
+        if ($ride->driver_id !== auth()->user()->driver->id) {
+            return response()->json(['message' => 'Action non autorisée'], 403);
+        }
+
+        // 2. Mise à jour de la course
+        $ride->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'final_price' => $ride->estimated_price // Pour l'instant on garde le prix estimé
+        ]);
+
+        // 3. Libération du chauffeur
+        // On repasse son statut à 'available' pour qu'il reçoive de nouvelles courses
+        $ride->driver->update(['status' => 'available']);
+        $ride->refresh();
+
+        // 4. Notification (Optionnel)
+        // On peut émettre un événement pour que le passager reçoive un reçu ou une alerte
+        event(new RideCompleted($ride));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Course terminée. Merci !',
             'ride' => $ride
         ]);
     }
@@ -185,24 +265,35 @@ class RideController extends Controller
         ]);
     }
 
-    public function cancel($id)
+    public function cancelRide(Request $request, Ride $ride)
     {
-        $ride = Ride::find($id);
+        $user = auth()->user();
+        // 1. Vérification : l'utilisateur est-il lié à la course ?
+        $isDriver = ($user->driver && $ride->driver_id === $user->driver->id);
+        $isPassenger = ($user->passenger && $ride->passenger_id === $user->passenger->id);
 
-        // Sécurité : Seul le passager ou le chauffeur peut annuler
-        // Et on ne peut annuler que si la course n'est pas déjà terminée
-        if ($ride->status === 'completed') {
-            return response()->json(['message' => 'Impossible d\'annuler une course terminée'], 400);
+        if (!$isDriver && !$isPassenger) {
+            return response()->json(['message' => 'Non autorisé'], 403);
         }
-
-        $ride->update(['status' => 'cancelled']);
-
-        // TODO : Émettre un événement RideCancelled pour prévenir le chauffeur
-        // event(new RideCancelled($ride));
+        // 2. Mise à jour de la course
+        $ride->update([
+            'status' => 'cancelled',
+            'cancelled_by' => $user->id, // On stocke l'ID de l'USER
+            'completed_at' => now()
+        ]);
+        // 3. Libérer le chauffeur si nécessaire
+        if ($ride->driver) {
+            $ride->driver->update(['status' => 'available']);
+        }
+        // 4. Déterminer le rôle pour l'événement (pour l'UI React)
+        $role = $isDriver ? 'driver' : 'passenger';
+        // 🔥 Diffusion de l'annulation
+        event(new RideCancelled($ride, $role));
 
         return response()->json([
             'success' => true,
-            'message' => 'Course annulée avec succès'
+            'message' => 'Course annulée',
+            'canceled_by' => $role
         ]);
     }
 
