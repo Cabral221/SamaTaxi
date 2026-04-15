@@ -14,9 +14,12 @@ function Routing({ from, to }) {
     const map = useMap();
     const routingControlRef = useRef(null);
 
+    // AJOUT : Sécurité absolue avant de faire quoi que ce soit
+    const isValid = from?.lat && from?.lng && to?.lat && to?.lng;
+
     // 1. Initialisation unique du contrôle
     useEffect(() => {
-        if (!map) return;
+        if (!map || !isValid) return;
 
         try {
             const routingControl = L.Routing.control({
@@ -61,7 +64,7 @@ function Routing({ from, to }) {
 
     // 2. Mise à jour dynamique des waypoints quand 'from' ou 'to' changent
     useEffect(() => {
-        if (routingControlRef.current && from?.lat && to?.lat) {
+        if (routingControlRef.current && isValid) {
             const start = L.latLng(parseFloat(from.lat), parseFloat(from.lng));
             const end = L.latLng(parseFloat(to.lat), parseFloat(to.lng));
 
@@ -74,7 +77,7 @@ function Routing({ from, to }) {
                 map.fitBounds(bounds, { padding: [70, 70], maxZoom: 17 });
             }
         }
-    }, [from.lat, from.lng, to.lat, to.lng, map]);
+    }, [from.lat, from.lng, to.lat, to.lng, map, isValid]);
 
     return null;
 }
@@ -104,6 +107,30 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
         });
 
         return () => window.Echo.leave(`rides.${ride.id}`);
+    }, [ride.id]);
+
+    // On crée un intervalle qui vérifie l'état toutes les 30 secondes
+    useEffect(() => {
+        const heartbeat = setInterval(async () => {
+            if (navigator.onLine) {
+                try {
+                    const response = await axios.get('/api/rides/current');
+                    // Si l'application pense qu'on est en course mais que le serveur dit non
+                    if (!response.data.ride && ride.id) {
+                        console.log("Sync: La course n'existe plus sur le serveur.");
+                        alert("La course a été interrompue ou annulée.");
+                        onCancel(); // On quitte la navigation
+                    }
+                } catch (error) {
+                    console.error("Heartbeat fail (probablement hors ligne)", error);
+                }
+            }else {
+                console.log("Heartbeat ignoré : Mode hors-ligne détecté.");
+            }
+        }, 30000); // 30000 ms = 30 secondes
+
+        // Très important : on nettoie l'intervalle quand on quitte le composant
+        return () => clearInterval(heartbeat);
     }, [ride.id]);
 
     const handleStartRide = async () => {
@@ -164,24 +191,28 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
     // Préparation des coordonnées de destination (conversion en float par sécurité)
     // --- LOGIQUE DE VALIDATION CORRIGÉE ---
     const pickupCoords = {
-        lat: parseFloat(ride.pickup_lat),
-        lng: parseFloat(ride.pickup_lng)
+        lat: parseFloat(ride?.pickup_lat),
+        lng: parseFloat(ride?.pickup_lng)
     };
 
     const destCoords = {
-        lat: parseFloat(ride.destination_lat),
-        lng: parseFloat(ride.destination_lng)
+        lat: parseFloat(ride?.destination_lat),
+        lng: parseFloat(ride?.destination_lng)
     };
 
     const isValidPickup = !isNaN(pickupCoords.lat) && !isNaN(pickupCoords.lng);
     const isValidDest = !isNaN(destCoords.lat) && !isNaN(destCoords.lng);
-    const isValidDriver = !isNaN(driverCoords.lat) && !isNaN(driverCoords.lng);
+    const isValidDriver = !isNaN(driverCoords?.lat) && !isNaN(driverCoords?.lng);
 
     // Déterminer la cible actuelle du tracé
+    // Sécurité pour la destination actuelle
     const currentDestination = status === 'in_progress' ? destCoords : pickupCoords;
-    const canRenderRouting = isValidDriver && (status === 'in_progress' ? isValidDest : isValidPickup);
 
-    if (!driverCoords || isLoading) {
+    // Vérification globale avant de tenter d'afficher le tracé
+    const canShowRoute = isValidDriver &&
+        (status === 'in_progress' ? !isNaN(destCoords.lat) : !isNaN(pickupCoords.lat));
+
+    if (!driverCoords || !driverCoords.lat || !ride || isLoading) {
         return (
             <div className="loader-container">
                 <div className="loader"></div>
@@ -239,13 +270,17 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
                 </button>
             </div>
 
-            <MapContainer center={[driverCoords.lat, driverCoords.lng]} zoom={16} style={{ height: '100%', width: '100%' }}>
+            <MapContainer
+                center={[driverCoords?.lat || 0, driverCoords?.lng || 0]}
+                zoom={16} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
                 {/* 1. Toujours afficher le chauffeur */}
-                <Marker position={[driverCoords.lat, driverCoords.lng]} icon={taxiIcon}>
-                    <Popup>Votre position</Popup>
-                </Marker>
+                {driverCoords?.lat && (
+                    <Marker position={[driverCoords.lat, driverCoords.lng]} icon={taxiIcon}>
+                        <Popup>Votre position</Popup>
+                    </Marker>
+                )}
 
                 {/* 2. Marqueur Client : On l'affiche TOUJOURS si valide,
                    mais on change son texte selon le statut */}
@@ -264,11 +299,11 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
                 )}
 
                 {/* 4. Le Routing : On force la persistance */}
-                {isValidDriver && (isValidPickup || isValidDest) && (
+                {canShowRoute && (
                     <Routing
                         key={status} // FORCE le rafraîchissement propre du tracé lors du changement de statut
                         from={driverCoords}
-                        to={status === 'in_progress' ? (isValidDest ? destCoords : pickupCoords) : pickupCoords}
+                        to={currentDestination}
                     />
                 )}
             </MapContainer>
