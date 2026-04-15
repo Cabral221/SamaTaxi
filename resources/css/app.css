@@ -47,3 +47,37 @@
   font-family: sans-serif;
   color: #555;
 }
+
+.offline-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #e74c3c; /* Rouge alerte */
+    color: white;
+    text-align: center;
+    padding: 10px;
+    font-weight: bold;
+    z-index: 9999; /* Toujours au-dessus de tout (Map, Form, etc.) */
+    font-size: 0.9em;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Optionnel : petite animation de pulsation */
+.offline-alert span {
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}

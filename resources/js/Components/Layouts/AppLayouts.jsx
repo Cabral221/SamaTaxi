@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Radar from '../Driver/Radar';
 import Index from '../Passenger/Index';
+import ConnectionAlert from '../Common/ConnectionAlert';
 
 function AppLayout({ children }) {
     const [user, setUser] = useState(null);
@@ -33,6 +34,9 @@ function AppLayout({ children }) {
 
     return (
         <div className="min-h-screen bg-gray-100">
+            {/* Alerte de connexion */}
+            <ConnectionAlert />
+
             {/* Ton Entête / Navbar ici */}
             <header className="bg-yellow-500 p-4 shadow-md">
                 <h1 className="text-white font-bold">SamaTaxi - {user?.name}</h1>

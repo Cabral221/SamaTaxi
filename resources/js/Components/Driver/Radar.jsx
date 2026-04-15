@@ -60,14 +60,19 @@ function Radar({ user }) {
                     lastUpdateRef.current = now;
                     // axios.post('/api/driver/location', newPos)...
 
-                    // 🔥 MODIFICATION : On récupère la distance renvoyée par ton API enrichie
-                    axios.post('/api/driver/location', newPos)
-                    .then(res => {
-                        if (res.data.active_ride_context) {
-                            setDistanceToPickup(res.data.active_ride_context.distance_to_pickup);
-                        }
-                    })
-                    .catch(e => console.log("DB Update failed"));
+                    if(navigator.onLine) {
+                        // 🔥 MODIFICATION : On récupère la distance renvoyée par ton API enrichie
+                        axios.post('/api/driver/location', newPos)
+                        .then(res => {
+                            if (res.data.active_ride_context) {
+                                setDistanceToPickup(res.data.active_ride_context.distance_to_pickup);
+                            }
+                        })
+                        .catch(e => console.log("DB Update failed"));
+                    }else {
+                        console.warn("Position non envoyée : chauffeur hors-ligne");
+                        return;
+                    }
                 }
             },
             (error) => console.error("Erreur GPS:", error),
@@ -98,7 +103,7 @@ function Radar({ user }) {
                     setNewRides(response.data.available_rides);
                 }
             } catch (error) {
-                console.error("Erreur chargement initial:", error.response?.status);
+                console.error("Erreur chargement initial:", error);
             } finally {
                 setLoading(false);
             }
