@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import L from 'leaflet'; // Import pour utiliser la fonction de distance
+import L from 'leaflet';
+import AddressInput from '../Common/AddressInput';
 
 function OrderForm({ onOrderCreated }) {
     const [points, setPoints] = useState({
@@ -10,14 +11,34 @@ function OrderForm({ onOrderCreated }) {
     const [details, setDetails] = useState({ distance: 0, price: 0 });
     const [loading, setLoading] = useState(false);
 
-    const getServerEstimation = async (distance) => {
-        if (!points.pickup.lat) return;
+    useEffect(() => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                try {
+                    const res = await axios.get(`https://photon.komoot.io/reverse?lon=${longitude}&lat=${latitude}`);
+                    const address = res.data.features[0]?.properties.name || "Ma position actuelle";
+                    setPoints(prev => ({
+                        ...prev,
+                        pickup: { address, lat: latitude, lng: longitude }
+                    }));
+                } catch (e) {
+                    setPoints(prev => ({
+                        ...prev,
+                        pickup: { address: "Ma position", lat: latitude, lng: longitude }
+                    }));
+                }
+            });
+        }
+    }, []);
+
+    const getServerEstimation = async (distance, pickup) => {
         try {
             const response = await axios.get('/api/rides/estimate', {
                 params: {
                     distance_km: distance / 1000,
-                    lat: points.pickup.lat,
-                    lng: points.pickup.lng
+                    lat: pickup.lat,
+                    lng: pickup.lng
                 }
             });
             if (response.data.success) {
@@ -31,40 +52,17 @@ function OrderForm({ onOrderCreated }) {
         }
     };
 
-    const searchAddress = async (type, query) => {
-        if (!query || query.length < 3) return;
-        try {
-            const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
-            if (res.data[0]) {
-                const { lat, lon, display_name } = res.data[0];
-                setPoints(prev => ({
-                    ...prev,
-                    [type]: { address: display_name, lat: parseFloat(lat), lng: parseFloat(lon) }
-                }));
-            }
-        } catch (e) { console.error("Erreur GPS", e); }
-    };
-
     useEffect(() => {
-        // Calcul réel dès qu'on a les deux points
         if (points.pickup.lat && points.destination.lat) {
             const p1 = L.latLng(points.pickup.lat, points.pickup.lng);
             const p2 = L.latLng(points.destination.lat, points.destination.lng);
-
-            // On calcule la distance "à vol d'oiseau" (ou via OSRM si tu veux être précis)
-            // Ici distanceTo donne des mètres
-            const realDistance = Math.round(p1.distanceTo(p2) * 1.2); // * 1.2 pour simuler les virages des rues
-
-            getServerEstimation(realDistance);
+            const realDistance = Math.round(p1.distanceTo(p2) * 1.3);
+            getServerEstimation(realDistance, points.pickup);
         }
-    }, [points.pickup.lat, points.pickup.lng, points.destination.lat, points.destination.lng]);
+    }, [points.pickup.lat, points.destination.lat]);
 
     const handleOrder = () => {
-        if (details.price === 0) {
-            alert("Veuillez attendre l'estimation du prix...");
-            return;
-        }
-
+        if (details.price === 0) return;
         setLoading(true);
         axios.post('/api/rides', {
             pickup_lat: points.pickup.lat,
@@ -83,51 +81,49 @@ function OrderForm({ onOrderCreated }) {
     };
 
     return (
-        <div style={{ padding: '20px', background: '#f9f9f9', borderRadius: '15px', boxShadow: '0 -2px 10px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ textAlign: 'center' }}>Où allez-vous ? 🚗</h2>
+        <div className="order-form-container">
+            <h2 className="text-xl font-extrabold text-center mb-6 text-gray-800">Où allez-vous ? 🚕</h2>
 
-            <div style={{ marginBottom: '15px' }}>
-                <input
-                    type="text"
-                    placeholder="Lieu de départ"
-                    onBlur={(e) => searchAddress('pickup', e.target.value)}
-                    style={inputStyle}
-                />
-            </div>
+            <AddressInput
+                label="Départ"
+                placeholder={points.pickup.address || "Point de départ..."}
+                defaultValue={points.pickup.address}
+                onSelect={(coords) => setPoints(prev => ({ ...prev, pickup: { address: coords.label, lat: coords.lat, lng: coords.lng } }))}
+            />
 
-            <div style={{ marginBottom: '15px' }}>
-                <input
-                    type="text"
-                    placeholder="Destination"
-                    onBlur={(e) => searchAddress('destination', e.target.value)}
-                    style={inputStyle}
-                />
-            </div>
+            <AddressInput
+                label="Destination"
+                placeholder="Entrez votre destination..."
+                onSelect={(coords) => setPoints(prev => ({ ...prev, destination: { address: coords.label, lat: coords.lat, lng: coords.lng } }))}
+            />
 
             {details.price > 0 && (
-                <div style={infoBoxStyle}>
-                    <p>Distance : <strong>{(details.distance / 1000).toFixed(1)} km</strong></p>
-                    <p>Prix : <strong style={{ color: '#27ae60', fontSize: '1.2em' }}>{details.price} FCFA</strong></p>
+                <div className="info-card">
+                    <div>
+                        <span className="block text-xs text-gray-400 uppercase font-bold">Distance</span>
+                        <span className="font-bold text-gray-700">{(details.distance / 1000).toFixed(1)} km</span>
+                    </div>
+                    <div className="text-right">
+                        <span className="block text-xs text-gray-400 uppercase font-bold">Prix estimé</span>
+                        <span className="font-black text-[#F8B803] text-xl">{details.price} FCFA</span>
+                    </div>
                 </div>
             )}
 
             <button
                 onClick={handleOrder}
                 disabled={!points.destination.lat || details.price === 0 || loading}
-                style={{
-                    ...buttonStyle,
-                    backgroundColor: (points.destination.lat && details.price > 0) ? '#2ecc71' : '#bdc3c7',
-                    color: 'white'
-                }}
+                className="btn-primary-taxi"
             >
-                {loading ? 'Recherche de chauffeur...' : 'COMMANDER MAINTENANT'}
+                {loading ? (
+                    <div className="flex items-center justify-center gap-2">
+                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                        Recherche...
+                    </div>
+                ) : 'COMMANDER SAMA TAXI'}
             </button>
         </div>
     );
 }
-
-const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' };
-const infoBoxStyle = { background: '#fff', padding: '10px', borderRadius: '8px', marginBottom: '15px', borderLeft: '5px solid #2ecc71' };
-const buttonStyle = { width: '100%', padding: '15px', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' };
 
 export default OrderForm;

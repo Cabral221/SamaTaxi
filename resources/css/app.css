@@ -81,3 +81,65 @@
     50% { opacity: 0.3; }
     100% { opacity: 1; }
 }
+
+/* --- DESIGN DU FORMULAIRE DE COMMANDE (OrderForm) --- */
+
+.order-form-container {
+    @apply p-6 bg-white rounded-t-[30px] shadow-2xl;
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.address-group {
+    @apply relative mb-4;
+}
+
+.address-label {
+    @apply block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1;
+}
+
+.address-input-field {
+    @apply w-full p-4 bg-gray-50 border-none rounded-2xl text-gray-800 outline-none transition-all duration-300;
+    @apply focus:ring-2 focus:ring-[#F8B803] focus:bg-white focus:shadow-md;
+    font-size: 16px; /* Évite le zoom auto sur iPhone */
+}
+
+/* --- LISTE DES SUGGESTIONS (Autocomplete) --- */
+.suggestions-list {
+    @apply absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl overflow-hidden z-[2000] border border-gray-100;
+}
+
+.suggestion-item {
+    @apply p-4 flex items-center gap-3 cursor-pointer transition-colors border-b border-gray-50 last:border-none;
+}
+
+.suggestion-item:hover {
+    @apply bg-orange-50;
+}
+
+.suggestion-icon {
+    @apply text-gray-400 flex-shrink-0;
+}
+
+.suggestion-text {
+    @apply flex flex-col;
+}
+
+.suggestion-name {
+    @apply text-sm font-semibold text-gray-800;
+}
+
+.suggestion-city {
+    @apply text-xs text-gray-500;
+}
+
+/* --- BOUTON DE COMMANDE --- */
+.btn-primary-taxi {
+    @apply w-full p-4 mt-2 bg-[#F8B803] text-black font-extrabold rounded-2xl shadow-lg transition-all active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none;
+    @apply uppercase tracking-widest text-sm;
+}
+
+.info-card {
+    @apply bg-gray-50 p-4 rounded-2xl flex justify-between items-center mb-4 border border-gray-100;
+}
