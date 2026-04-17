@@ -7,13 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // --- Routes Publiques (Accessibles sans connexion) ---
+Route::post('/password/otp', [AuthController::class, 'sendOtp']);
+Route::post('/password/reset', [AuthController::class, 'verifyOtp']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // --- Routes Protégées (Nécessitent un Token) ---
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-
     Route::get('/rides/estimate', [RideController::class, 'estimate']);
 
     // Routes spécifiques aux chauffeurs*
@@ -27,6 +27,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route pour créer une course
     Route::post('/rides', [RideController::class, 'store']);
 
+    // Route de deconnexion
+    Route::post('/logout', [AuthController::class, 'logout']);
     // Route pour vérifier si le token est toujours valide
     Route::get('/user', function (Request $request) {
         $user = $request->user();

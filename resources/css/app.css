@@ -10,6 +10,9 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 
 /* Cache le panneau d'itinéraire de Leaflet Routing Machine */
 .leaflet-routing-container {
@@ -46,4 +49,170 @@
   height: 100vh;
   font-family: sans-serif;
   color: #555;
+}
+
+.offline-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #e74c3c; /* Rouge alerte */
+    color: white;
+    text-align: center;
+    padding: 10px;
+    font-weight: bold;
+    z-index: 9999; /* Toujours au-dessus de tout (Map, Form, etc.) */
+    font-size: 0.9em;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Optionnel : petite animation de pulsation */
+.offline-alert span {
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/* --- DESIGN DU FORMULAIRE DE COMMANDE (OrderForm) --- */
+
+.order-form-container {
+    @apply p-6 bg-white rounded-[30px] shadow-2xl;
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.address-group {
+    @apply relative mb-4;
+}
+
+.address-label {
+    @apply block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1;
+}
+
+.address-input-field {
+    @apply w-full p-4 bg-gray-50 border-none rounded-2xl text-gray-800 outline-none transition-all duration-300;
+    @apply focus:ring-2 focus:ring-[#F8B803] focus:bg-white focus:shadow-md;
+    font-size: 16px; /* Évite le zoom auto sur iPhone */
+}
+
+/* --- LISTE DES SUGGESTIONS (Autocomplete) --- */
+.suggestions-list {
+    @apply absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl overflow-hidden z-[2000] border border-gray-100;
+}
+
+.suggestion-item {
+    @apply p-4 flex items-center gap-3 cursor-pointer transition-colors border-b border-gray-50 last:border-none;
+}
+
+.suggestion-item:hover {
+    @apply bg-orange-50;
+}
+
+.suggestion-icon {
+    @apply text-gray-400 flex-shrink-0;
+}
+
+.suggestion-text {
+    @apply flex flex-col;
+}
+
+.suggestion-name {
+    @apply text-sm font-semibold text-gray-800;
+}
+
+.suggestion-city {
+    @apply text-xs text-gray-500;
+}
+
+/* --- BOUTON DE COMMANDE --- */
+.btn-primary-taxi {
+    @apply w-full p-4 mt-2 bg-[#F8B803] text-black font-extrabold rounded-2xl shadow-lg transition-all active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none;
+    @apply uppercase tracking-widest text-sm;
+}
+
+.info-card {
+    @apply bg-gray-50 p-4 rounded-2xl flex justify-between items-center mb-4 border border-gray-100;
+}
+
+
+/* --- UTILITAIRES D'ANIMATION 2026 --- */
+
+@layer utilities {
+    .animate-in {
+        animation-duration: 500ms;
+        animation-fill-mode: forwards;
+        animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .fade-in {
+        animation-name: fadeIn;
+    }
+
+    .slide-in-from-bottom {
+        animation-name: slideInBottom;
+    }
+
+    .slide-in-from-bottom-4 {
+        animation-name: slideInBottom4;
+    }
+
+    .zoom-in-95 {
+        animation-name: zoomIn95;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInBottom {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+@keyframes slideInBottom4 {
+    from { transform: translateY(1rem); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes zoomIn95 {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+
+/* Permet au contenu de défiler si le clavier ou une liste dépasse */
+main {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Force le texte long à revenir à la ligne dans toute l'app */
+p, span, h1, h2 {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+/* Pour ta liste de courses chauffeur */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }

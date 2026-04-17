@@ -162,6 +162,30 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
         return () => window.Echo.leave(`rides.${ride.id}`);
     }, [ride.id]);
 
+    // On crée un intervalle qui vérifie l'état toutes les 30 secondes
+    useEffect(() => {
+        const heartbeat = setInterval(async () => {
+            if (navigator.onLine) {
+                try {
+                    const response = await axios.get('/api/rides/current');
+                    // Si l'application pense qu'on est en course mais que le serveur dit non
+                    if (!response.data.ride && ride.id) {
+                        console.log("Sync: La course n'existe plus sur le serveur.");
+                        alert("La course a été interrompue ou annulée.");
+                        onCancelSuccess(); // On appelle la fonction de sortie passée en props
+                    }
+                } catch (error) {
+                    console.error("Heartbeat fail (probablement hors ligne)", error);
+                }
+            }else {
+                console.log("Heartbeat ignoré : Mode hors-ligne détecté.");
+            }
+        }, 30000); // 30000 ms = 30 secondes
+
+        // Très important : on nettoie l'intervalle quand on quitte le composant
+        return () => clearInterval(heartbeat);
+    }, [ride.id]);
+
     const handleCancelRide = async () => {
         if (!window.confirm("Voulez-vous vraiment annuler votre course ?")) return;
         setIsCancelling(true);
