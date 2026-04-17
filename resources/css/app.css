@@ -88,7 +88,7 @@
 /* --- DESIGN DU FORMULAIRE DE COMMANDE (OrderForm) --- */
 
 .order-form-container {
-    @apply p-6 bg-white rounded-t-[30px] shadow-2xl;
+    @apply p-6 bg-white rounded-[30px] shadow-2xl;
     position: relative;
     max-width: 500px;
     margin: 0 auto;
@@ -145,4 +145,74 @@
 
 .info-card {
     @apply bg-gray-50 p-4 rounded-2xl flex justify-between items-center mb-4 border border-gray-100;
+}
+
+
+/* --- UTILITAIRES D'ANIMATION 2026 --- */
+
+@layer utilities {
+    .animate-in {
+        animation-duration: 500ms;
+        animation-fill-mode: forwards;
+        animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .fade-in {
+        animation-name: fadeIn;
+    }
+
+    .slide-in-from-bottom {
+        animation-name: slideInBottom;
+    }
+
+    .slide-in-from-bottom-4 {
+        animation-name: slideInBottom4;
+    }
+
+    .zoom-in-95 {
+        animation-name: zoomIn95;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInBottom {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+@keyframes slideInBottom4 {
+    from { transform: translateY(1rem); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes zoomIn95 {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+
+/* Permet au contenu de défiler si le clavier ou une liste dépasse */
+main {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Force le texte long à revenir à la ligne dans toute l'app */
+p, span, h1, h2 {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+/* Pour ta liste de courses chauffeur */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }

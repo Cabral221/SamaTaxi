@@ -1,8 +1,8 @@
 import './bootstrap.js'; // Pour charger Echo/Reverb
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import AppLayouts from './Components/Layouts/AppLayouts.jsx';
 import axios from 'axios';
+import AppLayouts from './Components/Layouts/AppLayouts.jsx';
 
 // CONFIGURATION GLOBALE D'AXIOS
 axios.interceptors.request.use(config => {

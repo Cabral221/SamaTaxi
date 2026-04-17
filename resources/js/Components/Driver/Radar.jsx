@@ -121,15 +121,20 @@ function Radar({ user }) {
             </div>
 
             {/* LISTE DES COURSES - Horizontal Scroll ou Stack */}
-            <div className="absolute bottom-8 left-0 right-0 z-10 px-4 flex flex-col gap-3">
+            {/* LISTE DES COURSES - Correction de l'affichage */}
+            <div className="absolute bottom-6 left-0 right-0 z-10 px-4">
                 {newRides.length === 0 ? (
-                    <div className="bg-black/50 backdrop-blur-md p-4 rounded-xl text-white text-center text-sm border border-white/10">
-                        En attente de nouvelles demandes dans votre zone...
+                    <div className="bg-black/60 backdrop-blur-md p-4 rounded-2xl text-white text-center text-sm border border-white/10 shadow-2xl">
+                        En attente de nouvelles demandes...
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto no-scrollbar">
+                    /* On limite la hauteur max pour laisser de la place à la carte,
+                    mais on s'assure que le contenu est scrollable si trop long */
+                    <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto no-scrollbar pb-4">
                         {newRides.map((ride) => (
-                            <RideCard key={ride.id} ride={ride} onAccept={handleAccept} />
+                            <div key={ride.id} className="animate-in slide-in-from-bottom-4 duration-500">
+                                <RideCard ride={ride} onAccept={handleAccept} />
+                            </div>
                         ))}
                     </div>
                 )}

@@ -19,28 +19,34 @@ const RideSearching = ({ ride, onCancel }) => {
             </p>
 
             {/* Détails de la course */}
-            <div className="w-full max-w-sm bg-gray-50 rounded-[25px] p-6 mb-8 border border-gray-100 shadow-sm">
-                <div className="flex flex-col gap-4 text-left">
-                    <div className="flex items-start gap-3">
-                        <div className="mt-1 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                        <div>
-                            <span className="block text-[10px] uppercase font-bold text-gray-400">Départ</span>
-                            <p className="text-sm font-semibold text-gray-700 truncate">{ride.pickup_address}</p>
+            {/* Détails de la course */}
+            <div className="w-full max-w-sm bg-gray-50 rounded-[30px] p-6 mb-8 border border-gray-100 shadow-sm">
+                <div className="flex flex-col gap-6 text-left">
+                    <div className="flex items-start gap-4">
+                        <div className="mt-1.5 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)] flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0"> {/* min-w-0 est crucial pour le break-word */}
+                            <span className="block text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">Point de départ</span>
+                            {/* On remplace truncate par break-words et on enlève la limite de ligne */}
+                            <p className="text-sm font-bold text-gray-800 leading-relaxed break-words">
+                                {ride.pickup_address}
+                            </p>
                         </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                        <div className="mt-1 w-2 h-2 rounded-full bg-[#F8B803] shadow-[0_0_8px_rgba(248,184,3,0.6)]"></div>
-                        <div>
-                            <span className="block text-[10px] uppercase font-bold text-gray-400">Destination</span>
-                            <p className="text-sm font-semibold text-gray-700 truncate">{ride.destination_address}</p>
+                    <div className="flex items-start gap-4">
+                        <div className="mt-1.5 w-2 h-2 rounded-full bg-[#F8B803] shadow-[0_0_10px_rgba(248,184,3,0.4)] flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                            <span className="block text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">Destination</span>
+                            <p className="text-sm font-bold text-gray-800 leading-relaxed break-words">
+                                {ride.destination_address}
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
-                    <span className="text-sm font-bold text-gray-400">PRIX ESTIMÉ</span>
-                    <span className="text-xl font-black text-gray-800">{ride.estimated_price} FCFA</span>
+                <div className="mt-6 pt-5 border-t border-dashed border-gray-200 flex justify-between items-center">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estimation</span>
+                    <span className="text-xl font-black text-gray-900">{ride.estimated_price} <small className="text-xs">FCFA</small></span>
                 </div>
             </div>
 
