@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import MapDisplay from '../Common/MapDisplay';
 import Navigation from './Navigation';
+import RideCard from '../Common/RideCard';
 
-// En dehors ou au début du composant
 const notificationSound = new Audio('/sounds/ride_requested.wav');
 
 function Radar({ user }) {
@@ -11,255 +11,132 @@ function Radar({ user }) {
     const [activeRide, setActiveRide] = useState(null);
     const [loading, setLoading] = useState(true);
     const [coords, setCoords] = useState(null);
-    // 🔥 AJOUT : État pour la distance dynamique
     const [distanceToPickup, setDistanceToPickup] = useState(null);
-    // Crée une variable useRef pour stocker le dernier envoi
     const lastUpdateRef = useRef(0);
 
-    // 🔥 FONCTION POUR DÉBLOQUER L'AUDIO
-    const unlockAudio = () => {
-        notificationSound.play().then(() => {
-            notificationSound.pause(); // On le lance et on le coupe direct
-            notificationSound.currentTime = 0;
-            console.log("🔊 Audio débloqué pour les notifications");
-        }).catch(e => console.log("Attente d'interaction..."));
-
-        // On retire l'écouteur après le premier clic pour ne pas polluer
-        document.removeEventListener('click', unlockAudio);
-    };
-
+    // --- LOGIQUE AUDIO & GPS (Inchangée mais optimisée) ---
     useEffect(() => {
+        const unlockAudio = () => {
+            notificationSound.play().then(() => {
+                notificationSound.pause();
+                notificationSound.currentTime = 0;
+            }).catch(() => {});
+            document.removeEventListener('click', unlockAudio);
+        };
         document.addEventListener('click', unlockAudio);
-        return () => document.removeEventListener('click', unlockAudio);
-    }, []);
 
-    const playNotification = () => {
-        notificationSound.currentTime = 0; // On repart du début
-        notificationSound.play().catch(error => {
-            console.warn("Lecture bloquée :", error);
-        });
-    };
-
-    useEffect(() => {
-        // --- A. GEOLOCALISATION ---
-        if (!navigator.geolocation) {
-            alert("La géolocalisation n'est pas supportée par votre navigateur");
-            return;
-        }
-
-        // On suit la position en temps réel
-        const watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                const newPos = { lat: position.coords.latitude, lng: position.coords.longitude };
-                setCoords(newPos);
-
-
-                // Limite les mises à jour à une toutes les 5 secondes
-                const now = Date.now();
-                if (now - lastUpdateRef.current > 5000) { // On n'envoie que toutes les 5 secondes
-                    lastUpdateRef.current = now;
-                    // axios.post('/api/driver/location', newPos)...
-
-                    if(navigator.onLine) {
-                        // 🔥 MODIFICATION : On récupère la distance renvoyée par ton API enrichie
+        if (navigator.geolocation) {
+            const watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const newPos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                    setCoords(newPos);
+                    const now = Date.now();
+                    if (now - lastUpdateRef.current > 5000 && navigator.onLine) {
+                        lastUpdateRef.current = now;
                         axios.post('/api/driver/location', newPos)
-                        .then(res => {
-                            if (res.data.active_ride_context) {
-                                setDistanceToPickup(res.data.active_ride_context.distance_to_pickup);
-                            }
-                        })
-                        .catch(e => console.log("DB Update failed"));
-                    }else {
-                        console.warn("Position non envoyée : chauffeur hors-ligne");
-                        return;
+                            .then(res => {
+                                if (res.data.active_ride_context) {
+                                    setDistanceToPickup(res.data.active_ride_context.distance_to_pickup);
+                                }
+                            });
                     }
-                }
-            },
-            (error) => console.error("Erreur GPS:", error),
-            { enableHighAccuracy: true }
-        );
-
-        return () => navigator.geolocation.clearWatch(watchId);
+                },
+                (error) => console.error(error),
+                { enableHighAccuracy: true }
+            );
+            return () => {
+                navigator.geolocation.clearWatch(watchId);
+                document.removeEventListener('click', unlockAudio);
+            };
+        }
     }, []);
 
+    // --- LOGIQUE WEBSOCKET & INITIAL FETCH (Sync avec ton backend) ---
     useEffect(() => {
         if (!coords) return;
 
-        // --- 1. CHARGEMENT INITIAL (Les courses déjà en attente) ---
-        const fetchExistingRides = async () => {
-            try {
-                const token = window.authToken || localStorage.getItem('token');
+        axios.get('/api/drivers/available-rides', { params: coords })
+            .then(res => { if(res.data.success) setNewRides(res.data.available_rides); })
+            .finally(() => setLoading(false));
 
-                const response = await axios.get('/api/drivers/available-rides', {
-                    params: coords,
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (response.data.success) {
-                    console.log(`📍 Position: ${coords.lat}, ${coords.lng} | 🚕 Courses trouvées:`, response.data.available_rides.length);
-                    setNewRides(response.data.available_rides);
-                }
-            } catch (error) {
-                console.error("Erreur chargement initial:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchExistingRides();
-
-        // --- 2. ÉCOUTE TEMPS RÉEL (WebSockets) ---
         const channel = window.Echo.channel('available-rides');
-
         channel.listen('.ride.created', (e) => {
-            console.log("🔔 WebSocket : Nouvelle course !", e);
-            playNotification();
-            setNewRides((prev) => {
-                // Vérifier si la course est déjà dans la liste (par son ID)
-                const exists = prev.find(r => r.id === e.ride.id);
-                if (exists) return prev; // Si elle existe, on ne change rien
-
-                return [e.ride, ...prev]; // Sinon on l'ajoute
-            });
-
+            notificationSound.play().catch(() => {});
+            setNewRides(prev => prev.find(r => r.id === e.ride.id) ? prev : [e.ride, ...prev]);
         });
 
         channel.listen('.ride.accepted', (e) => {
-            console.log("🔕 WebSocket : Course acceptée", e);
-
-            // 1. On prépare l'objet enrichi
-            const enrichedRide = {
-                ...e.ride,
-                driver: {
-                    ...e.ride.driver,
-                    lat: e.driverPosition?.lat,
-                    lng: e.driverPosition?.lng
-                }
-            };
-
-            // 2. On nettoie le radar pour tout le monde
-            setNewRides((prev) => prev.filter(ride => ride.id !== e.ride.id));
-            // 3. MISE À JOUR : On vérifie si c'est NOTRE ID (via le user)
-            // Ici, je suppose que vous avez accès à l'utilisateur connecté
+            setNewRides(prev => prev.filter(ride => ride.id !== e.ride.id));
             if (user && Number(e.ride.driver.user.id) === Number(user.id)) {
-                console.log("C'est ma course !", user);
-                setActiveRide(enrichedRide);
+                setActiveRide(e.ride);
             }
         });
 
         return () => window.Echo.leave('available-rides');
     }, [coords, user]);
 
-    useEffect(() => {
-            const checkActiveRide = async () => {
-                setLoading(true);
-                try {
-                    const response = await axios.get('/api/rides/current');
-                    if (response.data.ride) {
-                        setActiveRide(response.data.ride);
-
-                        // Si la course est encore en attente, on active la vue recherche
-                        if (response.data.ride.status === 'accepted') {
-                            // console.log("isSearching :", isSearching);
-                            console.log("accepted Etat :", response.data.ride);
-                            // setIsSearching(true);
-                            // console.log("isSearching Bas :", isSearching);
-                        } else if (response.data.ride.status === 'in_progress') {
-                            console.log("in_progress Etat :", response.data.ride);
-                        }
-                    }
-                } catch (error) {
-                    console.error("Erreur lors de la récupération de la course active", error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            checkActiveRide();
-        }, []);
-
-    // Action pour accepter une course
     const handleAccept = async (rideId) => {
         try {
-            const response = await axios.post(`/api/rides/${rideId}/accept`, {});
-            if (response.data.success) {
-                setActiveRide(response.data.ride);
-            }
+            const response = await axios.post(`/api/rides/${rideId}/accept`);
+            if (response.data.success) setActiveRide(response.data.ride);
         } catch (error) {
-            alert("Trop tard ! La course a été prise.");
+            alert("Cette course n'est plus disponible.");
         }
     };
 
-    // 🔀 AIGUILLAGE DE VUE
-    if (activeRide) {
-        return (
-            <Navigation
-                driverCoords={coords}
-                ride={activeRide}
-                onCancel={() => setActiveRide(null)}
-                distanceRemaining={distanceToPickup} // 🔥 ON PASSE LA DISTANCE ICI
-            />
-        );
-    }
+    if (activeRide) return <Navigation driverCoords={coords} ride={activeRide} onCancel={() => setActiveRide(null)} distanceRemaining={distanceToPickup} />;
 
-
-    if (loading || !coords) {
-        return (
-            <div className="loader-container">
-                <div className="loader"></div>
-                <p>Chargement de votre position...</p>
-            </div>
-        );
-    }
+    if (loading || !coords) return (
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50">
+            <div className="w-12 h-12 border-4 border-[#F8B803] border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500 font-medium animate-pulse">Initialisation du Radar...</p>
+        </div>
+    );
 
     return (
-        <div style={{ padding: '20px', background: '#f0f0f0', borderRadius: '8px' }}>
-            <h3>🚕 Radar SamaTaxi (Live)</h3>
-
-            <div style={{ height: '400px'}}>
+        <div className="relative h-screen w-full bg-slate-900 overflow-hidden">
+            {/* CARTE EN BACKGROUND - Full Screen */}
+            <div className="absolute inset-0 z-0">
                 <MapDisplay center={coords} rides={newRides} />
             </div>
 
-            {newRides.length === 0 && <p>Aucune course à proximité pour le moment...</p>}
+            {/* HEADER OVERLAY */}
+            <div className="absolute top-4 left-4 right-4 z-10">
+                <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/20 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-lg font-black text-gray-800 flex items-center gap-2">
+                            <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            </span>
+                            RADAR LIVE
+                        </h1>
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">SamaTaxi Chauffeur</p>
+                    </div>
+                    <div className="text-right">
+                        <span className="block text-sm font-black text-[#F8B803]">{newRides.length}</span>
+                        <span className="text-[10px] text-gray-400 font-bold">DISPONIBLES</span>
+                    </div>
+                </div>
+            </div>
 
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-                {newRides.map((ride) => (
-                    <li key={ride.id} style={{
-                        marginBottom: '10px',
-                        padding: '15px',
-                        background: '#fff',
-                        borderRadius: '10px',
-                        borderLeft: '5px solid #F8B803',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                    }}>
-                        <strong>Client :</strong> {ride.passenger?.user?.name || 'Inconnu'} <br />
-                        <strong>Prix :</strong> {ride.estimated_price} XOF <br />
-                        {ride.distance_to_pickup && (
-                            <small>📍 À {(ride.distance_to_pickup / 1000).toFixed(1)} km de vous</small>
-                        )}
-                        <br />
-                        <button
-                            onClick={() => handleAccept(ride.id)}
-                            style={{
-                                marginTop: '10px',
-                                background: 'green',
-                                color: 'white',
-                                border: 'none',
-                                padding: '8px 15px',
-                                borderRadius: '5px',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Accepter
-                        </button>
-                    </li>
-                ))}
-            </ul>
+            {/* LISTE DES COURSES - Horizontal Scroll ou Stack */}
+            <div className="absolute bottom-8 left-0 right-0 z-10 px-4 flex flex-col gap-3">
+                {newRides.length === 0 ? (
+                    <div className="bg-black/50 backdrop-blur-md p-4 rounded-xl text-white text-center text-sm border border-white/10">
+                        En attente de nouvelles demandes dans votre zone...
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto no-scrollbar">
+                        {newRides.map((ride) => (
+                            <RideCard key={ride.id} ride={ride} onAccept={handleAccept} />
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
+
 
 export default Radar;
