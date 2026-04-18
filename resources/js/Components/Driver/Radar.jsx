@@ -75,6 +75,35 @@ function Radar({ user }) {
         return () => window.Echo.leave('available-rides');
     }, [coords, user]);
 
+    // --- CHECK ACTIVE RIDE ON LOAD (Pour gérer les cas de rafraîchissement) ---
+    useEffect(() => {
+        const checkActiveRide = async () => {
+            setLoading(true);
+            try {
+                const response = await axios.get('/api/rides/current');
+                if (response.data.ride) {
+                    setActiveRide(response.data.ride);
+
+                    // Si la course est encore en attente, on active la vue recherche
+                    if (response.data.ride.status === 'accepted') {
+                        // console.log("isSearching :", isSearching);
+                        console.log("accepted Etat :", response.data.ride);
+                        // setIsSearching(true);
+                        // console.log("isSearching Bas :", isSearching);
+                    } else if (response.data.ride.status === 'in_progress') {
+                        console.log("in_progress Etat :", response.data.ride);
+                    }
+                }
+            } catch (error) {
+                console.error("Erreur lors de la récupération de la course active", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkActiveRide();
+    }, []);
+
     const handleAccept = async (rideId) => {
         try {
             const response = await axios.post(`/api/rides/${rideId}/accept`);
