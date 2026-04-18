@@ -62,14 +62,20 @@ function Index({ user }) { // Récupère le user depuis AppLayout
 
     // Check course active au chargement
     useEffect(() => {
-        axios.get('/api/rides/current')
-            .then(res => {
-                if (res.data.ride) {
-                    setCurrentRide(res.data.ride);
-                    if (res.data.ride.status === 'requested') setIsSearching(true);
-                }
-            })
-            .finally(() => setLoading(false));
+        setLoading(true);
+        try {
+            axios.get('/api/rides/current')
+                .then(res => {
+                    if (res.data.ride) {
+                        setCurrentRide(res.data.ride);
+                        if (res.data.ride.status === 'requested') setIsSearching(true);
+                    }
+                })
+                .finally(() => setLoading(false));
+        } catch (error) {
+            console.log('Impossible de vérifier la course active', error);
+            setLoading(false);
+        }
     }, []);
 
     if (loading) return (
