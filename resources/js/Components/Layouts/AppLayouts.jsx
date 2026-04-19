@@ -79,7 +79,7 @@ function AppLayout({ children }) {
                     {/* Header Minimaliste 2026 */}
                     <Header user={user} onLogout={handleLogout}/>
 
-                    <main className="flex-1 relative overflow-hidden pt-20">
+                    <main className="flex-1 relative overflow-hidden pt-20 h-screen">
                         {/* 🚕 Vue Chauffeur */}
                         {user.role === 'driver' && <Radar user={user} />}
 

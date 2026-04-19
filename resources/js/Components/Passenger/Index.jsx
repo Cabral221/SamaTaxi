@@ -85,7 +85,7 @@ function Index({ user }) { // Récupère le user depuis AppLayout
     );
 
     return (
-        <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden">
+        <div className="relative h-screen w-full overflow-hidden">
             {/* 1. VUE RECHERCHE (Overlay plein écran avec animation) */}
             {isSearching && currentRide && (
                 <div className="fixed inset-0 z-[100] bg-white animate-in slide-in-from-bottom duration-500">
@@ -97,7 +97,7 @@ function Index({ user }) { // Récupère le user depuis AppLayout
             )}
 
             {/* 2. CONTENU PRINCIPAL */}
-            <div className="max-w-[500px] mx-auto px-5 py-8">
+            <div className="mx-auto">
                 {!currentRide ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                         {/* Header Minimaliste 2026 */}
@@ -129,7 +129,7 @@ function Index({ user }) { // Récupère le user depuis AppLayout
                     </div>
                 ) : (
                     /* 3. VUE NAVIGATION (Une fois la course acceptée) */
-                    <div className="animate-in zoom-in-95 duration-500">
+                    <div className="absolute inset-0 w-full animate-in zoom-in-95 duration-500">
                         <Navigation
                             ride={currentRide}
                             onCancelSuccess={() => setCurrentRide(null)}
