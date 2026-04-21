@@ -59,9 +59,17 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
 
         //Ecoute les mouvements du chauffeur pour mettre à jour sa position en temps réel
         channel.listen('.driver.moved', (e) => {
+            // console.log("🚖 Position du chauffeur mise à jour :", e);
             if (e.lat && e.lng) {
                 setDriverPos({ lat: parseFloat(e.lat), lng: parseFloat(e.lng) });
             }
+        });
+
+
+        channel.listen('.ride.accepted', (e) => {
+            console.log("🚀 Course acceptée", e);
+            setStatus('accepted');
+            setDriverPos({ lat: e.driverPosition.lat, lng: e.driverPosition.lng });
         });
 
         // Ecoute la notification d'arrivée à destination du chauffeur
