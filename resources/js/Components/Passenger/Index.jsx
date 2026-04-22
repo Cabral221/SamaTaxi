@@ -3,10 +3,13 @@ import axios from "axios";
 import Navigation from "./Navigation";
 import OrderForm from "./OrderForm";
 import RideSearching from "./RideSearching";
+import PassengerProfile from "./PassengerProfile";
 
 const notificationSound = new Audio('/sounds/ride_requested.wav');
 
-function Index({ user }) { // Récupère le user depuis AppLayout
+function Index({ user, activeView, onViewChange }) { // Récupère le user depuis AppLayout
+    const [view, setView] = useState('HOME');
+
     const [currentRide, setCurrentRide] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -33,6 +36,13 @@ function Index({ user }) { // Récupère le user depuis AppLayout
         notificationSound.currentTime = 0;
         notificationSound.play().catch(e => console.warn("Lecture bloquée"));
     };
+
+    // IMPORTANT : Synchronise la vue quand on clique dans le Header
+    useEffect(() => {
+        if (activeView) {
+            setView(activeView);
+        }
+    }, [activeView]);
 
     useEffect(() => {
         const unlockAudio = () => {
@@ -66,6 +76,7 @@ function Index({ user }) { // Récupère le user depuis AppLayout
         try {
             axios.get('/api/rides/current')
                 .then(res => {
+                    // console.log("Vérification de la course active au chargement :", res.data);
                     if (res.data.ride) {
                         setCurrentRide(res.data.ride);
                         if (res.data.ride.status === 'requested') setIsSearching(true);
@@ -83,6 +94,14 @@ function Index({ user }) { // Récupère le user depuis AppLayout
             <div className="w-10 h-10 border-4 border-[#F8B803] border-t-transparent rounded-full animate-spin"></div>
         </div>
     );
+
+    // On modifie le rendu pour intercepter la vue PROFILE
+    if (view === 'PROFILE') {
+        return <PassengerProfile user={user} passenger={user.passenger_data} onBack={() => {
+            setView('HOME');
+            onViewChange('HOME'); // Notifie AppLayout pour remettre le scroll/état à zéro
+        }} />;
+    }
 
     return (
         <div className="relative h-screen w-full overflow-hidden">

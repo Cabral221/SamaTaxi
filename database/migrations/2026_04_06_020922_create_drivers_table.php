@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('drivers', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('phone_number')->unique();
+            $table->string('avatar')->nullable();        // Path de la photo
             $table->enum('status', ['available', 'busy', 'offline'])->default('offline');
             // Colonne PostGIS pour la position actuelle
             // On utilise 'geography' pour des calculs précis en mètres/kilomètres
@@ -21,8 +23,13 @@ return new class extends Migration
             // 10 chiffres au total, 8 après la virgule pour une précision au centimètre
             $table->decimal('lat', 10, 8)->nullable()->after('current_location');
             $table->decimal('lng', 11, 8)->nullable()->after('lat');
+            $table->string('vehicule_make')->nullable(); // Ex: Toyota
+            $table->string('vehicule_model')->nullable(); // Ex: Corolla
+            $table->string('vehicule_plate')->nullable(); // Ex: DK-1234-A
+            $table->string('license')->nullable()->after('vehicule_plate');
 
             $table->timestamps();
+
         });
     }
 
