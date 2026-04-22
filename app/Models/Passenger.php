@@ -13,7 +13,8 @@ class Passenger extends Model
 
     protected $fillable = [
         'user_id',
-        'phone_number'
+        'phone_number',
+        'avatar',
     ];
 
     public function user()

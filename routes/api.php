@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DriverController;
+use App\Http\Controllers\Api\PassengerController;
 use App\Http\Controllers\Api\RideController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route pour créer une course
     Route::post('/rides', [RideController::class, 'store']);
 
+    // Update Profile Drive
+    Route::post('/driver/profile', [DriverController::class, 'updateProfile']);
+    Route::post('/passenger/profile', [PassengerController::class, 'updateProfile']);
+
     // Route de deconnexion
     Route::post('/logout', [AuthController::class, 'logout']);
     // Route pour vérifier si le token est toujours valide
@@ -41,6 +46,9 @@ Route::middleware('auth:sanctum')->group(function () {
             'name' => $user->name,
             'email' => $user->email,
             'role' => $isDriver ? 'driver' : ($isPassenger ? 'passenger' : null),
+            'driver_data' => $isDriver ? $user->driver : null,
+            'passenger_data' => $isPassenger ? $user->passenger : null,
+
         ]);
     });
 });

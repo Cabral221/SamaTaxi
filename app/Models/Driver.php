@@ -14,10 +14,15 @@ class Driver extends Model
     protected $fillable = [
         'user_id',
         'phone_number',
+        'avatar',
+        'license',
         'status',
         'current_location',
         'lat',
         'lng',
+        'vehicule_make',
+        'vehicule_model',
+        'vehicule_plate',
     ];
 
     protected $casts = [

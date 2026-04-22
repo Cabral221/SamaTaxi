@@ -2,6 +2,7 @@ import './bootstrap.js'; // Pour charger Echo/Reverb
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
+import { ToastProvider } from './Components/Context/ToastContext.jsx';
 import AppLayouts from './Components/Layouts/AppLayouts.jsx';
 
 // CONFIGURATION GLOBALE D'AXIOS
@@ -16,5 +17,9 @@ axios.interceptors.request.use(config => {
 
 const rootElement = document.getElementById('app');
 if (rootElement) {
-    ReactDOM.createRoot(rootElement).render(<AppLayouts />);
+    ReactDOM.createRoot(rootElement).render(
+        <ToastProvider>
+            <AppLayouts />
+        </ToastProvider>
+    );
 }

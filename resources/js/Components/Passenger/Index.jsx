@@ -3,10 +3,13 @@ import axios from "axios";
 import Navigation from "./Navigation";
 import OrderForm from "./OrderForm";
 import RideSearching from "./RideSearching";
+import PassengerProfile from "./PassengerProfile";
 
 const notificationSound = new Audio('/sounds/ride_requested.wav');
 
-function Index({ user }) { // Récupère le user depuis AppLayout
+function Index({ user, activeView, onViewChange }) { // Récupère le user depuis AppLayout
+    const [view, setView] = useState('HOME');
+
     const [currentRide, setCurrentRide] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -33,6 +36,13 @@ function Index({ user }) { // Récupère le user depuis AppLayout
         notificationSound.currentTime = 0;
         notificationSound.play().catch(e => console.warn("Lecture bloquée"));
     };
+
+    // IMPORTANT : Synchronise la vue quand on clique dans le Header
+    useEffect(() => {
+        if (activeView) {
+            setView(activeView);
+        }
+    }, [activeView]);
 
     useEffect(() => {
         const unlockAudio = () => {
@@ -62,14 +72,21 @@ function Index({ user }) { // Récupère le user depuis AppLayout
 
     // Check course active au chargement
     useEffect(() => {
-        axios.get('/api/rides/current')
-            .then(res => {
-                if (res.data.ride) {
-                    setCurrentRide(res.data.ride);
-                    if (res.data.ride.status === 'requested') setIsSearching(true);
-                }
-            })
-            .finally(() => setLoading(false));
+        setLoading(true);
+        try {
+            axios.get('/api/rides/current')
+                .then(res => {
+                    // console.log("Vérification de la course active au chargement :", res.data);
+                    if (res.data.ride) {
+                        setCurrentRide(res.data.ride);
+                        if (res.data.ride.status === 'requested') setIsSearching(true);
+                    }
+                })
+                .finally(() => setLoading(false));
+        } catch (error) {
+            console.log('Impossible de vérifier la course active', error);
+            setLoading(false);
+        }
     }, []);
 
     if (loading) return (
@@ -78,8 +95,16 @@ function Index({ user }) { // Récupère le user depuis AppLayout
         </div>
     );
 
+    // On modifie le rendu pour intercepter la vue PROFILE
+    if (view === 'PROFILE') {
+        return <PassengerProfile user={user} passenger={user.passenger_data} onBack={() => {
+            setView('HOME');
+            onViewChange('HOME'); // Notifie AppLayout pour remettre le scroll/état à zéro
+        }} />;
+    }
+
     return (
-        <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden">
+        <div className="relative h-screen w-full overflow-hidden">
             {/* 1. VUE RECHERCHE (Overlay plein écran avec animation) */}
             {isSearching && currentRide && (
                 <div className="fixed inset-0 z-[100] bg-white animate-in slide-in-from-bottom duration-500">
@@ -91,7 +116,7 @@ function Index({ user }) { // Récupère le user depuis AppLayout
             )}
 
             {/* 2. CONTENU PRINCIPAL */}
-            <div className="max-w-[500px] mx-auto px-5 py-8">
+            <div className="mx-auto">
                 {!currentRide ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                         {/* Header Minimaliste 2026 */}
@@ -123,7 +148,7 @@ function Index({ user }) { // Récupère le user depuis AppLayout
                     </div>
                 ) : (
                     /* 3. VUE NAVIGATION (Une fois la course acceptée) */
-                    <div className="animate-in zoom-in-95 duration-500">
+                    <div className="absolute inset-0 w-full animate-in zoom-in-95 duration-500">
                         <Navigation
                             ride={currentRide}
                             onCancelSuccess={() => setCurrentRide(null)}

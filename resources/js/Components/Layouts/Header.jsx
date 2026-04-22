@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const Header = ({ user, onLogout }) => {
+const Header = ({ user, onLogout, onViewChange }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
@@ -50,8 +50,16 @@ const Header = ({ user, onLogout }) => {
                             </div>
 
                             <nav className="space-y-1">
-                                <MenuButton icon="👤" label="Mon Compte" />
-                                <MenuButton icon="🚕" label="Mes Courses" />
+                                <MenuButton
+                                    icon="👤"
+                                    label="Mon Compte"
+                                    onClick={() => { onViewChange('PROFILE'); setIsMenuOpen(false); }}
+                                />
+                                <MenuButton
+                                    icon="🚕"
+                                    label="Mes Courses"
+                                    onClick={() => { onViewChange('HISTORY'); setIsMenuOpen(false); }}
+                                />
                                 <MenuButton icon="⚙️" label="Paramètres" />
                                 <div className="h-[1px] bg-gray-50 my-3 mx-4"></div>
                                 <button
@@ -73,8 +81,9 @@ const Header = ({ user, onLogout }) => {
     );
 };
 
-const MenuButton = ({ icon, label }) => (
-    <button className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 rounded-2xl transition-all text-gray-600 hover:text-black">
+const MenuButton = ({ icon, label, onClick }) => (
+    <button onClick={onClick}
+        className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 rounded-2xl transition-all text-gray-600 hover:text-black">
         <span className="text-lg">{icon}</span>
         <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
     </button>

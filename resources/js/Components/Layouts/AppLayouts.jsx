@@ -9,10 +9,15 @@ import Index from '../Passenger/Index';
 import ConnectionAlert from '../Common/ConnectionAlert';
 
 function AppLayout({ children }) {
+    // 1. Renomme ton état pour qu'il serve aux deux rôles
+    const [activeView, setActiveView] = useState('HOME');
+
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     // Gestion de la vue interne quand non connecté : 'login' ou 'register' ou 'forgot'
     const [authView, setAuthView] = useState('login');
+    // AJOUTER CECI : État de navigation pour le chauffeur
+    const [driverView, setDriverView] = useState('RADAR');
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -77,14 +82,19 @@ function AppLayout({ children }) {
                 // --- INTERFACE CONNECTÉE ---
                 <div className="flex flex-col h-screen overflow-hidden">
                     {/* Header Minimaliste 2026 */}
-                    <Header user={user} onLogout={handleLogout}/>
+                    <Header user={user} onLogout={handleLogout} onViewChange={(view) => setActiveView(view)} />
 
-                    <main className="flex-1 relative overflow-hidden pt-20">
+                    <main className={`flex-1 relative pt-20 h-screen ${activeView === 'PROFILE' ? 'overflow-y-auto' : 'overflow-hidden'}`}>
                         {/* 🚕 Vue Chauffeur */}
-                        {user.role === 'driver' && <Radar user={user} />}
+                        {user.role === 'driver' && <Radar user={user}
+                                                        currentView={activeView}
+                                                        setCurrentView={setActiveView} />}
 
                         {/* 👤 Vue Passager */}
-                        {user.role === 'passenger' && <Index user={user} />}
+                        {user.role === 'passenger' && <Index
+                                                        user={user}
+                                                        activeView={activeView}
+                                                        onViewChange={setActiveView} />}
 
                         {/* ⚠️ Sécurité Rôle */}
                         {!user.role && (

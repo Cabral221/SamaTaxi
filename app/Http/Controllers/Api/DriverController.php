@@ -10,6 +10,48 @@ use Illuminate\Support\Facades\DB;
 
 class DriverController extends Controller
 {
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+        $driver = $user->driver;
+
+        // Validation
+        $request->validate([
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'full_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'phone_number' => 'required|string|max:20',
+            'license' => 'nullable|mimes:pdf,jpg,jpeg,png|max:5120',
+            'vehicule_make' => 'required|string|max:255',
+            'vehicule_plate' => 'required|unique:drivers,vehicule_plate,' . $driver->id,
+        ]);
+
+        // 1. Update User Table
+        $user->update(['name' => $request->full_name, 'email' => $request->email]);
+
+        // 2. Handle Avatar Upload
+        if ($request->hasFile('avatar')) {
+            $avatarPath = $request->file('avatar')->store('drivers/avatars', 'public');
+            $driver->avatar = '/storage/' . $avatarPath;
+        }
+
+        // 3. Handle License Document Upload
+        if ($request->hasFile('license')) {
+            $licensePath = $request->file('license')->store('drivers/licenses', 'public');
+            $driver->license = '/storage/' . $licensePath;
+        }
+
+        // 4. Update Driver Table (les autres champs)
+        $driver->update([
+            'phone_number' => $request->phone_number,
+            'vehicule_make' => $request->vehicule_make,
+            'vehicule_model' => $request->vehicule_model,
+            'vehicule_plate' => $request->vehicule_plate,
+        ]);
+
+        return response()->json(['success' => true, 'driver' => $driver]);
+    }
+
     public function updateLocation(Request $request)
     {
         $request->validate([
@@ -44,7 +86,7 @@ class DriverController extends Controller
             // Distance pour le chauffeur (calculée via ton modèle Ride)
             $distance = $activeRide->getDistance($request->lat, $request->lng);
 
-            $response['active_ride_context'] = [
+            $response['activehicule_ride_context'] = [
                 'distance_to_pickup' => round($distance),
                 'is_nearby' => $distance <= 150
             ];
