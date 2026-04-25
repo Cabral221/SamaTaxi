@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Driver;
 use App\Models\Ride;
 use App\Services\RideService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -279,7 +280,7 @@ class RideController extends Controller
         $ride->update([
             'status' => 'cancelled',
             'cancelled_by' => $user->id, // On stocke l'ID de l'USER
-            'completed_at' => now()
+            'completed_at' => Carbon::now()
         ]);
         // 3. Libérer le chauffeur si nécessaire
         if ($ride->driver) {

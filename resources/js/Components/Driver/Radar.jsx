@@ -163,21 +163,26 @@ function Radar({ user, currentView, setCurrentView }) {
                 <div className="absolute top-24 left-6 right-6 z-10">
                     <div className="bg-slate-900/95 backdrop-blur-2xl p-4 rounded-[2.5rem] shadow-2xl border border-white/10 flex justify-between items-center">
                         <div className="flex items-center gap-4 ml-2">
-                            <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center">
-                                <span className="animate-spin-slow text-lg">📡</span>
+                            <div className="relative">
+                                <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center shadow-[0_0_20px_rgba(248,184,3,0.5)]">
+                                    <span className="animate-spin-slow text-lg">📡</span>
+                                </div>
                             </div>
                         </div>
                         <div>
-                            <h1 className="text-xs font-black text-white uppercase tracking-[0.2em] leading-none">Radar Actif</h1>
-                            <p className="text-[9px] text-yellow-400/80 font-bold uppercase mt-1">Dakar • Live</p>
+                            <h1 className="text-xs font-black text-white uppercase tracking-[0.2em] leading-none">
+                                Système Radar
+                            </h1>
+                            <p className="text-[9px] text-yellow-400/80 font-bold uppercase mt-1 tracking-widest">Recherche active • Dakar</p>
                         </div>
                     </div>
 
                     <div className="bg-white/10 px-5 py-2 rounded-2xl border border-white/5">
-                        <span className="text-xs font-black text-white">{newRides.length} OFFRES</span>
+                        <span className="text-xs font-black text-white">
+                            {newRides.length} <span className="text-yellow-400">DISPO</span>
+                        </span>
                     </div>
                 </div>
-                {/* </div> */}
 
                 {/* 3. LISTE DES COURSES (Radar Only) */}
                 <div className="absolute bottom-8 left-0 right-0 z-10 px-6">

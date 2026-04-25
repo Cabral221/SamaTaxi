@@ -13,7 +13,7 @@ const taxiIcon = L.icon({
     iconAnchor: [17, 17]
 });
 
-function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
+function Navigation({ driverCoords, ride, onCancel, distanceRemaining, setCurrentView }) {
     const { status, isLoading, performAction } = useRideHooks(ride, onCancel);
 
     // Hooks des handle trans
@@ -27,13 +27,14 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
     // Ecoute la notification d'annulation de la course
     useEffect(() => {
         // On écoute le canal spécifique de la course
+        // console.log("🔔 Écoute des événements pour la course ID:", ride);
         const channel = window.Echo.private(`rides.${ride.id}`);
         channel.listen('.ride.canceled', (e) => {
             console.log("❌ Course annulée par :", e.canceledBy);
             if(e.canceledBy === 'passenger') {
                 alert("Le passager a annulé la course. Veuillez nous excuser.");
-                onCancel();
             }
+            onCancel();
         });
 
         return () => window.Echo.leave(`rides.${ride.id}`);
@@ -116,15 +117,24 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining }) {
                 <div style={{ width: '40px', height: '4px', background: '#e0e0e0', margin: '0 auto 20px', borderRadius: '10px' }} />
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <div>
-                        <h3 style={{ margin: 0, fontSize: '1.2em', fontWeight: '800' }}>
-                            {status === 'in_progress' ? "🚩 Destination" : "👤 Prise en charge"}
-                        </h3>
-                        <p style={{ margin: 0, color: '#636e72', fontSize: '0.9em' }}>
-                            {status === 'in_progress' ? ride.destination_address : ride.passenger?.user?.name}
-                        </p>
+                    <div style={{ display: 'flex' }}>
+                        <div style={{
+                            width: '45px', height: '45px', background: '#f1f2f6', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: 'bold', color: '#2ecc71', fontSize: '1.2em', border: '2px solid #2ecc71'
+                        }}>
+                            <img src={ "storage/" + ride.passenger?.avatar} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
+                        </div>
+                        <div className='pl-6'>
+                            <h3 style={{ margin: 0, fontSize: '1.2em', fontWeight: '800' }}>
+                                {status === 'in_progress' ? "🚩 Destination" : "Prise en charge"}
+                            </h3>
+                            <p style={{ margin: 0, color: '#636e72', fontSize: '0.9em' }}>
+                                {status === 'in_progress' ? ride.destination_address : ride.passenger?.user?.name}
+                            </p>
+                        </div>
                     </div>
-                    <a href={`tel:${ride.passenger?.user?.phone}`} style={{ padding: '12px', background: '#f1f2f6', borderRadius: '50%', textDecoration: 'none' }}>📞</a>
+                    <a href={`tel:${ride.passenger?.phone_number}`} style={{ padding: '12px', background: '#f1f2f6', borderRadius: '50%', textDecoration: 'none' }}>📞</a>
                 </div>
 
                 {/* BOUTON D'ACTION PRINCIPAL */}

@@ -153,14 +153,15 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
 
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
                     <div style={style.driverAvatar}>
-                        {ride.driver?.user?.name?.charAt(0) || "T"}
+                        {/* {ride.driver?.user?.name?.charAt(0) || "T"} */}
+                        <img src={ ride.driver?.avatar} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
                     </div>
                     <div style={{ marginLeft: '12px' }}>
                         <p style={{ margin: 0, fontWeight: '700', fontSize: '1em' }}>{ride.driver?.user?.name || "Chauffeur"}</p>
-                        <p style={{ margin: 0, fontSize: '0.85em', color: '#636e72' }}>Toyota Corolla • 4.8 ⭐</p>
+                        <p style={{ margin: 0, fontSize: '0.85em', color: '#636e72' }}>{ ride.driver?.vehicule_make } { ride.driver?.vehicule_model } • 4.8 ⭐</p>
                     </div>
                     <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                        <a href={`tel:${ride.driver?.user?.phone}`} style={style.phoneBtn}>📞</a>
+                        <a href={`tel:${ride.driver?.phone_number}`} style={style.phoneBtn}>📞</a>
                     </div>
                 </div>
 
