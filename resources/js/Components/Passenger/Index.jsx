@@ -4,6 +4,7 @@ import Navigation from "./Navigation";
 import OrderForm from "./OrderForm";
 import RideSearching from "./RideSearching";
 import PassengerProfile from "./PassengerProfile";
+import RideHistory from "./RideHistory";
 
 const notificationSound = new Audio('/sounds/ride_requested.wav');
 
@@ -100,6 +101,11 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
         return <PassengerProfile user={user} passenger={user.passenger_data} onBack={() => {
             setView('HOME');
             onViewChange('HOME'); // Notifie AppLayout pour remettre le scroll/état à zéro
+        }} />;
+    }else if (view === 'HISTORY') {
+        return <RideHistory onBack={() => {
+            setView('HOME');
+            onViewChange('HOME'); // Pour synchroniser avec AppLayout
         }} />;
     }
 

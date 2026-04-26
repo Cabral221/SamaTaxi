@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Storage;
 
 class PassengerController extends Controller
 {
-    public function updateProfile(Request $request)
-    {
+
+    public function updateProfile(Request $request) {
         $user = $request->user();
         $passenger = $user->passenger;
 
@@ -62,6 +62,17 @@ class PassengerController extends Controller
             'success' => true,
             'message' => 'Profil mis à jour',
             'user'    => $user->load('passenger') // On renvoie le user frais
+        ]);
+    }
+
+    public function history(Request $request) {
+        $rides = $request->user()->passenger->rides() // Assure-toi d'avoir la relation dans User.php
+            ->latest()
+            ->paginate(10); // Pagination à 10 par page
+
+        return response()->json([
+            'success' => true,
+            'rides' => $rides
         ]);
     }
 }

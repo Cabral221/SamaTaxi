@@ -19,17 +19,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Routes spécifiques aux chauffeurs*
     Route::post('/driver/location', [DriverController::class, 'updateLocation']);
+    Route::post('/driver/profile', [DriverController::class, 'updateProfile']);
     Route::get('/drivers/available-rides', [RideController::class, 'availableRides']);
     Route::post('/rides/{id}/accept', [RideController::class, 'acceptRide']);
     Route::post('/rides/{ride}/start', [RideController::class, 'start']);
     Route::post('/rides/{ride}/complete', [RideController::class, 'completeRide']);
     Route::post('/rides/{ride}/cancel', [RideController::class, 'cancelRide']);
     Route::get('/rides/current', [RideController::class, 'current']);
-    // Route pour créer une course
+    // Routes spécifiques au passagers
     Route::post('/rides', [RideController::class, 'store']);
-
-    // Update Profile Drive
-    Route::post('/driver/profile', [DriverController::class, 'updateProfile']);
+    Route::get('/passenger/rides/history', [PassengerController::class, 'history']);
     Route::post('/passenger/profile', [PassengerController::class, 'updateProfile']);
 
     // Route de deconnexion

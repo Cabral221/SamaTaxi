@@ -84,7 +84,11 @@ function AppLayout({ children }) {
                     {/* Header Minimaliste 2026 */}
                     <Header user={user} onLogout={handleLogout} onViewChange={(view) => setActiveView(view)} />
 
-                    <main className={`flex-1 relative pt-20 h-screen ${activeView === 'PROFILE' ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+                    <main className={`flex-1 relative pt-20 h-screen ${
+                        (activeView === 'PROFILE' || activeView === 'HISTORY')
+                            ? 'overflow-y-auto pb-20'
+                            : 'overflow-hidden'
+                    }`}>
                         {/* 🚕 Vue Chauffeur */}
                         {user.role === 'driver' && <Radar user={user}
                                                         currentView={activeView}
