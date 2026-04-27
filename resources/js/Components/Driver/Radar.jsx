@@ -4,6 +4,7 @@ import MapDisplay from '../Common/MapDisplay';
 import Navigation from './Navigation';
 import RideCard from '../Common/RideCard';
 import DriverProfile from './DriverProfile';
+import DriverHistory from './DriverHistory';
 
 const notificationSound = new Audio('/sounds/ride_requested.wav');
 
@@ -130,7 +131,7 @@ function Radar({ user, currentView, setCurrentView }) {
         }
 
         if (currentView === 'HISTORY') {
-            return <div className="pt-24 px-6">Historique (Bientôt disponible)</div>;
+            return (<DriverHistory onBack={() => setCurrentView('RADAR')} />);
         }
 
         // 2. Priorité SECONDAIRE : Si une course est en cours, on montre la Navigation
