@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const AddressInput = ({ label, placeholder, onSelect, defaultValue }) => {
+const AddressInput = ({ label, placeholder, onSelect, value }) => {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [isTyping, setIsTyping] = useState(false); // 🔥 Pour bloquer les recherches auto après sélection
 
     useEffect(() => {
-        if (defaultValue) {
-            setQuery(defaultValue);
+        if (value) {
+            setQuery(value);
             setIsTyping(false); // C'est une valeur auto, on ne cherche pas
         }
-    }, [defaultValue]);
+    }, [value]);
 
     useEffect(() => {
         // 🔥 On ne cherche que si l'utilisateur tape ET que ce n'est pas la valeur par défaut
-        if (isTyping && query.length > 3 && query !== defaultValue) {
+        if (isTyping && query.length > 3 && query !== value) {
             const delayDebounceFn = setTimeout(() => {
                 searchAddress(query);
             }, 500);
@@ -37,7 +37,7 @@ const AddressInput = ({ label, placeholder, onSelect, defaultValue }) => {
 
     return (
         <div className="address-group">
-            <label className="address-label">{label}</label>
+            {/* <label className="address-label">{label}</label> */}
             <input
                 type="text"
                 value={query}
