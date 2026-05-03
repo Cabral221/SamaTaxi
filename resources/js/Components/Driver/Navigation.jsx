@@ -121,7 +121,7 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining, setCurren
                         <div style={{
                             width: '45px', height: '45px', background: '#f1f2f6', borderRadius: '50%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 'bold', color: '#2ecc71', fontSize: '1.2em', border: '2px solid #2ecc71'
+                            fontWeight: 'bold', color: '#F8B803', fontSize: '1.2em', border: '2px solid #F8B803'
                         }}>
                             <img src={ "storage/" + ride.passenger?.avatar} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
                         </div>

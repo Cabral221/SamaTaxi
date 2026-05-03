@@ -4,11 +4,11 @@ const Header = ({ user, onLogout, onViewChange }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-md z-[5000] px-6 flex justify-between items-center border-b border-gray-50">
+        <header className="fixed top-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-md z-[5000] px-6 flex justify-between items-center border-b border-gray-50" style={{backgroundColor: '#F8B803'}}>
             {/* Logo */}
             <div className="flex items-center gap-2">
-                <div className="bg-[#F8B803] w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
-                    <span className="font-black text-black text-xl italic">S</span>
+                <div className="bg-[#000] w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
+                    <span className="font-black text-[#F8B803] text-xl italic">ST</span>
                 </div>
                 <span className="font-black tracking-tighter text-gray-900 uppercase hidden sm:block">SamaTaxi</span>
             </div>
@@ -61,13 +61,13 @@ const Header = ({ user, onLogout, onViewChange }) => {
                                     onClick={() => { onViewChange('HISTORY'); setIsMenuOpen(false); }}
                                 />
                                 <MenuButton icon="⚙️" label="Paramètres" />
-                                <div className="h-[1px] bg-gray-50 my-3 mx-4"></div>
+                                <div className="h-[1px] bg-gray-50 my-2 mx-4"></div>
                                 <button
                                     onClick={() => {
                                         setIsMenuOpen(false);
                                         onLogout();
                                     }}
-                                    className="w-full flex items-center gap-3 p-4 text-red-500 hover:bg-red-50 rounded-2xl transition-all group"
+                                    className="w-full flex items-center gap-3 px-4 py-2 text-red-500 hover:bg-red-50 rounded-2xl transition-all group"
                                 >
                                     <span className="text-lg group-hover:scale-110 transition-transform">📥</span>
                                     <span className="text-[10px] font-black uppercase tracking-widest">Déconnexion</span>
@@ -83,7 +83,7 @@ const Header = ({ user, onLogout, onViewChange }) => {
 
 const MenuButton = ({ icon, label, onClick }) => (
     <button onClick={onClick}
-        className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 rounded-2xl transition-all text-gray-600 hover:text-black">
+        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-2xl transition-all text-gray-600 hover:text-black">
         <span className="text-lg">{icon}</span>
         <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
     </button>

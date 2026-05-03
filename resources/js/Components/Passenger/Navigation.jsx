@@ -6,6 +6,7 @@ import 'leaflet-routing-machine';
 import SamaRouting from '../Common/SamaRouting';
 import { useRideHooks } from '../Hooks/useRideHooks';
 import { navStyles as style } from './NavigationStyle';
+import { useToast } from '../Context/ToastContext';
 
 
 const taxiIcon = L.icon({
@@ -27,6 +28,7 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
     const [hasNotifiedArrival, setHasNotifiedArrival] = useState(false);
     // const [status, setStatus] = useState(ride.status);
     const { status, setStatus, isLoading, setIsLoading, performAction } = useRideHooks(ride, onCancelSuccess);
+    const { showToast } = useToast();
 
     // Calcul dynamique Distance / Temps
     useEffect(() => {
@@ -67,7 +69,7 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
 
 
         channel.listen('.ride.accepted', (e) => {
-            console.log("🚀 Course acceptée", e);
+            showToast("Votre chauffeur est en route !", "success");
             setStatus('accepted');
             setDriverPos({ lat: e.driverPosition.lat, lng: e.driverPosition.lng });
         });
@@ -75,8 +77,7 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
         // Ecoute la notification d'arrivée à destination du chauffeur
         channel.listen('.ride.completed', (e) => {
             setStatus('completed');
-            console.log("🏁 Course terminée !", e);
-            alert("Vous êtes arrivé à destination. Merci d'avoir choisi SamaTaxi !");
+            showToast("Vous êtes arrivé à destination. Merci d'avoir choisi SamaTaxi !", "success");
             // C'est ici que tu "décroches" le client
             // En appelant une fonction passée en props par le parent (ex: App.js ou Home.js)
             onCompleted();
