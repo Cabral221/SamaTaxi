@@ -15,7 +15,7 @@ const taxiIcon = L.icon({
     iconAnchor: [17, 17]
 });
 
-function Navigation({ ride, onCancelSuccess, onCompleted }) {
+function Navigation({ ride, onCancelSuccess }) {
     const [driverPos, setDriverPos] = useState(() => {
         if (ride.driver && ride.driver.lat && ride.driver.lng) {
             return { lat: parseFloat(ride.driver.lat), lng: parseFloat(ride.driver.lng) };
@@ -67,20 +67,11 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
             }
         });
 
-
+        // Ecoute l'acceptation de la course
         channel.listen('.ride.accepted', (e) => {
             showToast("Votre chauffeur est en route !", "success");
             setStatus('accepted');
             setDriverPos({ lat: e.driverPosition.lat, lng: e.driverPosition.lng });
-        });
-
-        // Ecoute la notification d'arrivée à destination du chauffeur
-        channel.listen('.ride.completed', (e) => {
-            setStatus('completed');
-            showToast("Vous êtes arrivé à destination. Merci d'avoir choisi SamaTaxi !", "success");
-            // C'est ici que tu "décroches" le client
-            // En appelant une fonction passée en props par le parent (ex: App.js ou Home.js)
-            onCompleted();
         });
 
         return () => window.Echo.leave(`rides.${ride.id}`);

@@ -6,12 +6,14 @@ import RideSearching from "./RideSearching";
 import PassengerProfile from "./PassengerProfile";
 import PassengerMap from "./PassengerMap";
 import RideHistory from "./RideHistory";
+import { useToast } from "../Context/ToastContext";
 
 const notificationSound = new Audio('/sounds/ride_requested.wav');
 
 function Index({ user, activeView, onViewChange }) { // Récupère le user depuis AppLayout
+    const { showToast } = useToast();
+    const [mapKey, setMapKey] = useState(0);
     const [view, setView] = useState('HOME');
-
     const [currentRide, setCurrentRide] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -100,8 +102,33 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
                     setIsSearching(false);
                     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                 });
+
             return () => channel.stopListening('.ride.accepted');
         }
+
+        if (currentRide && !isSearching) {
+            const channel = window.Echo.private(`rides.${currentRide.id}`);
+                // Ecoute la notification d'arrivée à destination du chauffeur
+            channel.listen('.ride.completed', (e) => {
+                console.log("🔔 Course terminée !", e);
+                showToast("Vous êtes arrivé à destination. Merci d'avoir choisi SamaTaxi !", "success");
+
+                setTimeout(() => {
+                    setCurrentRide(null);
+                    setRideDetails({ distance: 0, price: 0 });
+                    setPoints({
+                        pickup: points.pickup,
+                        destination: { address: '', lat: null, lng: null }
+                    });
+                    setMapKey(prev => prev + 1);
+                }, 3000);
+                // C'est ici que tu "décroches" le client
+            });
+
+            return () => channel.stopListening('.ride.completed');
+
+        }
+
     }, [currentRide, isSearching]);
 
     // Check course active au chargement
@@ -161,6 +188,7 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
                         {/* LA CARTE (Prend tout l'espace en arrière-plan) */}
                         <div className="absolute inset-0 z-0">
                             <PassengerMap
+                                key={mapKey} // Permet de forcer le rechargement de la carte quand on reset les points
                                 pickup={points.pickup}
                                 destination={points.destination}
                                 onPickupChange={handlePickupFromMap} // Mise à jour quand on bouge la carte
@@ -226,7 +254,6 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
                         <Navigation
                             ride={currentRide}
                             onCancelSuccess={() => setCurrentRide(null)}
-                            onCompleted={() => setCurrentRide(null)}
                         />
                     </div>
                 )}
