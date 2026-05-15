@@ -34,7 +34,7 @@ class Driver extends Model
         'lng' => 'float',
     ];
 
-    protected $appends = ['lat', 'lng'];
+    protected $appends = ['lat', 'lng', 'avatar_url'];
 
     // Forcez Laravel à ne pas essayer de deviner le type de current_location
     protected $attributes = [
@@ -50,6 +50,20 @@ class Driver extends Model
     public function getLngAttribute($value)
     {
         return $value;
+    }
+
+    public function getAvatarUrlAttribute()
+    {
+        if (!$this->avatar) {
+            return null;
+        }
+
+        // Si l'avatar commence déjà par http, on le laisse tel quel (cas des seeds ou externes)
+        if (str_starts_with($this->avatar, 'http')) {
+            return $this->avatar;
+        }
+
+        return asset('storage/' . $this->avatar);
     }
 
     public function user()

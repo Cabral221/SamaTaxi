@@ -11,7 +11,7 @@ const DriverProfile = ({ user, driverData, onBack }) => {
     const [errors, setErrors] = useState({}); // Stockage des erreurs de validation
 
     const avatarInputRef = useRef(null);
-    const [avatarPreview, setAvatarPreview] = useState(driverData.avatar);
+    const [avatarPreview, setAvatarPreview] = useState(driverData.avatar_url);
 
     const [formData, setFormData] = useState({
         avatar_file: null,

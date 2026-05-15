@@ -30,8 +30,8 @@ class DriverController extends Controller
 
         // 2. Handle Avatar Upload
         if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('drivers/avatars', 'public');
-            $driver->avatar = '/storage/' . $avatarPath;
+            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+            $driver->avatar = $avatarPath;
         }
 
         // 3. Handle License Document Upload
