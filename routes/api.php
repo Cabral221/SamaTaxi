@@ -18,15 +18,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/rides/estimate', [RideController::class, 'estimate']);
 
     // Routes spécifiques aux chauffeurs*
-    Route::post('/driver/location', [DriverController::class, 'updateLocation']);
     Route::post('/driver/profile', [DriverController::class, 'updateProfile']);
-    Route::get('/drivers/available-rides', [RideController::class, 'availableRides']);
-    Route::post('/rides/{id}/accept', [RideController::class, 'acceptRide']);
-    Route::post('/rides/{ride}/start', [RideController::class, 'start']);
-    Route::post('/rides/{ride}/complete', [RideController::class, 'completeRide']);
-    Route::post('/rides/{ride}/cancel', [RideController::class, 'cancelRide']);
     Route::get('/driver/rides/history', [DriverController::class, 'history']);
-    Route::get('/rides/current', [RideController::class, 'current']);
+    Route::middleware('driver.verified')->group(function () {
+        Route::post('/driver/location', [DriverController::class, 'updateLocation']);
+        Route::get('/drivers/available-rides', [RideController::class, 'availableRides']);
+        Route::post('/rides/{id}/accept', [RideController::class, 'acceptRide']);
+        Route::post('/rides/{ride}/start', [RideController::class, 'start']);
+        Route::post('/rides/{ride}/complete', [RideController::class, 'completeRide']);
+        Route::post('/rides/{ride}/cancel', [RideController::class, 'cancelRide']);
+        Route::get('/rides/current', [RideController::class, 'current']);
+    });
+
     // Routes spécifiques au passagers
     Route::post('/rides', [RideController::class, 'store']);
     Route::get('/passenger/rides/history', [PassengerController::class, 'history']);
@@ -36,19 +39,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     // Route pour vérifier si le token est toujours valide
     Route::get('/user', function (Request $request) {
-        $user = $request->user();
-        // On charge explicitement les relations pour être sûr
-        $isDriver = $user->driver()->exists();
-        $isPassenger = $user->passenger()->exists();
+        // On charge les relations une seule fois
+        $user = $request->user()->load(['driver', 'passenger']);
 
         return response()->json([
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'role' => $isDriver ? 'driver' : ($isPassenger ? 'passenger' : null),
-            'driver_data' => $isDriver ? $user->driver : null,
-            'passenger_data' => $isPassenger ? $user->passenger : null,
-
+            'role' => $user->driver ? 'driver' : ($user->passenger ? 'passenger' : null),
+            'driver_data' => $user->driver,
+            'passenger_data' => $user->passenger,
         ]);
     });
 });
