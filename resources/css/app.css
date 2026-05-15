@@ -110,7 +110,16 @@
 
 /* --- LISTE DES SUGGESTIONS (Autocomplete) --- */
 .suggestions-list {
-    @apply absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl overflow-hidden z-[2000] border border-gray-100;
+    position: absolute;
+    bottom: 110%; /* Toujours en haut */
+    left: 0;
+    right: 0;
+    background: white;
+    z-index: 9999 !important; /* Force le passage au-dessus de tout */
+    border-radius: 20px;
+    box-shadow: 0 -15px 35px rgba(0,0,0,0.2);
+    /* Optionnel : ajoute une bordure légère pour le contraste */
+    border: 1px solid rgba(0,0,0,0.05);
 }
 
 .suggestion-item {
@@ -215,4 +224,19 @@ p, span, h1, h2 {
 .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+}
+/* PassengerMap.jsx */
+/* Supprime le design par défaut de la bulle Leaflet pour ne garder que notre étiquette */
+.distance-popup .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.distance-popup .leaflet-popup-tip-container {
+    display: none; /* Cache la flèche pour un look "badge" */
+}
+
+.distance-popup .leaflet-popup-content {
+    margin: 0 !important;
 }

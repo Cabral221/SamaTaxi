@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class DriverController extends Controller
 {
-    public function updateProfile(Request $request)
-    {
+    public function updateProfile(Request $request) {
         $user = auth()->user();
         $driver = $user->driver;
 
@@ -52,8 +51,7 @@ class DriverController extends Controller
         return response()->json(['success' => true, 'driver' => $driver]);
     }
 
-    public function updateLocation(Request $request)
-    {
+    public function updateLocation(Request $request) {
         $request->validate([
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
@@ -98,4 +96,28 @@ class DriverController extends Controller
         return response()->json($response);
     }
 
+    public function history(Request $request) {
+        $driver = $request->user()->driver;
+
+        // Récupérer les courses paginées
+        $rides = $driver->rides()
+            ->where('status', 'completed')
+            ->latest()
+            ->paginate(10);
+
+        // Calculer le total des gains (uniquement sur les courses de la page ou globales)
+        // Ici, on peut faire un petit résumé des gains totaux du chauffeur
+        $totalEarnings = $driver->rides()->where('status', 'completed')->sum('estimated_price');
+        $totalDistance = $driver->rides()->where('status', 'completed')->sum('distance_km'); // Si tu as ce champ
+
+        return response()->json([
+            'success' => true,
+            'rides' => $rides,
+            'stats' => [
+                'total_earnings' => $totalEarnings,
+                'rides_count' => $driver->rides()->where('status', 'completed')->count(),
+                'total_distance' => $totalDistance
+            ]
+        ]);
+    }
 }

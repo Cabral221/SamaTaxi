@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useToast } from '../Context/ToastContext';
 
 export const useRideHooks = (ride, onExit) => {
     const [status, setStatus] = useState(ride.status);
     const [isLoading, setIsLoading] = useState(false);
+    const { showToast } = useToast();
 
     // 1. Synchronisation initiale
     useEffect(() => {
@@ -19,7 +21,7 @@ export const useRideHooks = (ride, onExit) => {
         channel.listen('.ride.started', () => setStatus('in_progress'));
         channel.listen('.ride.canceled', (e) => {
             const msg = e.canceledBy === 'driver' ? "Le chauffeur a annulé la course." : "Course annulée par le client.";
-            alert(msg);
+            showToast(msg, "error");
             onExit(); // On ferme la vue
         });
 
@@ -60,7 +62,7 @@ export const useRideHooks = (ride, onExit) => {
             }
             return { success: true };
         } catch (error) {
-            alert(`Erreur lors de l'action : ${actionType}`);
+            showToast(`Erreur lors de l'action : ${actionType}`, "error");
             return { success: false };
         } finally {
             setIsLoading(false);

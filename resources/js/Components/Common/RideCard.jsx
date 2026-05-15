@@ -8,7 +8,11 @@ const RideCard = ({ ride, onAccept }) => {
                 <div className="flex items-center gap-4">
                     <div className="relative">
                         <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-2xl shadow-lg shadow-slate-200">
-                            <span className="grayscale-0">👤</span>
+                            {ride.passenger?.avatar ? (
+                                <img src={ "storage/" + ride.passenger.avatar} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
+                            ) : (
+                                <span className="grayscale-0">👤</span>
+                            )}
                         </div>
                         <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white"></div>
                     </div>

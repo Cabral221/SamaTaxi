@@ -6,6 +6,7 @@ import 'leaflet-routing-machine';
 import SamaRouting from '../Common/SamaRouting';
 import { useRideHooks } from '../Hooks/useRideHooks';
 import { navStyles as style } from './NavigationStyle';
+import { useToast } from '../Context/ToastContext';
 
 
 const taxiIcon = L.icon({
@@ -14,7 +15,7 @@ const taxiIcon = L.icon({
     iconAnchor: [17, 17]
 });
 
-function Navigation({ ride, onCancelSuccess, onCompleted }) {
+function Navigation({ ride, onCancelSuccess }) {
     const [driverPos, setDriverPos] = useState(() => {
         if (ride.driver && ride.driver.lat && ride.driver.lng) {
             return { lat: parseFloat(ride.driver.lat), lng: parseFloat(ride.driver.lng) };
@@ -27,6 +28,7 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
     const [hasNotifiedArrival, setHasNotifiedArrival] = useState(false);
     // const [status, setStatus] = useState(ride.status);
     const { status, setStatus, isLoading, setIsLoading, performAction } = useRideHooks(ride, onCancelSuccess);
+    const { showToast } = useToast();
 
     // Calcul dynamique Distance / Temps
     useEffect(() => {
@@ -65,21 +67,11 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
             }
         });
 
-
+        // Ecoute l'acceptation de la course
         channel.listen('.ride.accepted', (e) => {
-            console.log("🚀 Course acceptée", e);
+            showToast("Votre chauffeur est en route !", "success");
             setStatus('accepted');
             setDriverPos({ lat: e.driverPosition.lat, lng: e.driverPosition.lng });
-        });
-
-        // Ecoute la notification d'arrivée à destination du chauffeur
-        channel.listen('.ride.completed', (e) => {
-            setStatus('completed');
-            console.log("🏁 Course terminée !", e);
-            alert("Vous êtes arrivé à destination. Merci d'avoir choisi SamaTaxi !");
-            // C'est ici que tu "décroches" le client
-            // En appelant une fonction passée en props par le parent (ex: App.js ou Home.js)
-            onCompleted();
         });
 
         return () => window.Echo.leave(`rides.${ride.id}`);
@@ -153,14 +145,15 @@ function Navigation({ ride, onCancelSuccess, onCompleted }) {
 
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
                     <div style={style.driverAvatar}>
-                        {ride.driver?.user?.name?.charAt(0) || "T"}
+                        {/* {ride.driver?.user?.name?.charAt(0) || "T"} */}
+                        <img src={ ride.driver?.avatar} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
                     </div>
                     <div style={{ marginLeft: '12px' }}>
                         <p style={{ margin: 0, fontWeight: '700', fontSize: '1em' }}>{ride.driver?.user?.name || "Chauffeur"}</p>
-                        <p style={{ margin: 0, fontSize: '0.85em', color: '#636e72' }}>Toyota Corolla • 4.8 ⭐</p>
+                        <p style={{ margin: 0, fontSize: '0.85em', color: '#636e72' }}>{ ride.driver?.vehicule_make } { ride.driver?.vehicule_model } • 4.8 ⭐</p>
                     </div>
                     <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                        <a href={`tel:${ride.driver?.user?.phone}`} style={style.phoneBtn}>📞</a>
+                        <a href={`tel:${ride.driver?.phone_number}`} style={style.phoneBtn}>📞</a>
                     </div>
                 </div>
 

@@ -108,7 +108,7 @@ const PassengerProfile = ({ user, passenger, onBack }) => {
                         disabled={loading}
                         className="w-full py-5 bg-black text-[#F8B803] rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all"
                     >
-                        {loading ? 'Mise à jour...' : 'Sauvegarder les modifications'}
+                        {loading ? 'Mise à jour...' : 'Enregistrer'}
                     </button>
                 </form>
             </div>
