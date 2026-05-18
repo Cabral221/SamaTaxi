@@ -52,7 +52,7 @@ class DatabaseSeeder extends Seeder
         Driver::factory()->create([
             'user_id' => $testDriver->id,
             'account_status' => 'active', // Assure l'accès immédiat au Radar pour tes tests
-            'status' => 'available',
+            'status' => 'offline', // Par défaut, le chauffeur est hors ligne. Tu pourras le mettre en ligne via l'interface ou les tests.
         ]);
     }
 }

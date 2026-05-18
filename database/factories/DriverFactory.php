@@ -27,7 +27,7 @@ class DriverFactory extends Factory
             'user_id' => User::factory(),
             // numerify('########') va remplacer chaque '#' par un chiffre aléatoire
             'phone_number' => '+2217' . fake()->numerify('########'),
-            'status' => fake()->randomElement(['available', 'busy', 'offline']),
+            'status' => 'offline',
             'account_status' => fake()->randomElement(['active', 'pending']),
             'current_location' => DB::raw("ST_GeomFromText('POINT($lng $lat)', 4326)"),
         ];
