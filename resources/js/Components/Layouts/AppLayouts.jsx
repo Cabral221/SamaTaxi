@@ -40,25 +40,35 @@ function AppLayout({ children }) {
 
     // Fonction pour centraliser la réussite de l'auth
     const handleAuthSuccess = (userData, token) => {
+        // 1. Stocker le token immédiatement
         localStorage.setItem('token', token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+        // 2. Reset des vues de navigation pour éviter de rester bloqué sur une ancienne vue
+        setActiveView('HOME');
+        setDriverView('RADAR');
+
+        // 3. Injecter l'utilisateur complet dans l'état
         setUser(userData);
     };
 
     const handleLogout = async () => {
         try {
-            // 1. Appel API pour supprimer le token en base de données
+        // 1. Appel API pour supprimer le token en base de données
             await axios.post('/api/logout');
         } catch (error) {
             console.error("Erreur lors de la déconnexion API", error);
         } finally {
-            // 2. Nettoyage local (qu'importe si l'API a réussi ou non)
-            localStorage.removeItem('token');
+            // 2. Nettoyage TOTAL du localStorage pour éviter les amalgames
+            localStorage.clear(); // Supprime le token et d'éventuels résidus
 
-            // 3. Supprimer le header Authorization pour les prochaines requêtes
+            // 3. Supprimer le header Authorization pour couper les accès aux requêtes suivantes
             delete axios.defaults.headers.common['Authorization'];
 
-            // 4. Reset de l'état utilisateur (provoque le basculement vers Login)
+            // 4. Reset complet de tous les états de l'application
             setUser(null);
+            setActiveView('HOME');
+            setDriverView('RADAR');
             setAuthView('login');
         }
     };
@@ -73,6 +83,7 @@ function AppLayout({ children }) {
             </div>
         );
     }
+    console.log("Utilisateur connecté :", user);
 
     return (
         <div className="min-h-screen bg-[#FBFBFB] selection:bg-yellow-200">
@@ -90,12 +101,15 @@ function AppLayout({ children }) {
                             : 'overflow-hidden'
                     }`}>
                         {/* 🚕 Vue Chauffeur */}
-                        {user.role === 'driver' && <Radar user={user}
+                        {user.role === 'driver' && <Radar
+                                                        key={user?.id}
+                                                        user={user}
                                                         currentView={activeView}
                                                         setCurrentView={setActiveView} />}
 
                         {/* 👤 Vue Passager */}
                         {user.role === 'passenger' && <Index
+                                                        key={user?.id}
                                                         user={user}
                                                         activeView={activeView}
                                                         onViewChange={setActiveView} />}

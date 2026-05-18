@@ -1,45 +1,34 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
 
-export default function PendingReview() {
+export default function PendingReview({ user }) {
     return (
-        <div className="min-h-screen bg-[#FBFBFB] flex flex-col items-center justify-center p-6 text-center">
-            <Head title="Compte en examen" />
-
-            {/* Illustration ou Icone Animée */}
-            <div className="w-32 h-32 bg-[#F8B803] rounded-full flex items-center justify-center shadow-lg mb-8 animate-pulse">
-                <span className="text-5xl">⏳</span>
+        <div className="h-screen w-full bg-[#FBFBFB] flex flex-col items-center justify-center p-8 text-center">
+            <div className="relative mb-8">
+                <div className="w-24 h-24 bg-[#F8B803] rounded-[2rem] flex items-center justify-center shadow-xl animate-bounce">
+                    <span className="text-4xl">⏳</span>
+                </div>
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md">
+                    <span className="text-xs">✨</span>
+                </div>
             </div>
 
-            <h1 className="text-2xl font-bold text-slate-900 mb-4">
-                Votre compte est en cours d'examen
+            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">
+                Dossier en cours
             </h1>
-
-            <p className="text-slate-600 max-w-sm mb-10">
-                Merci de votre patience, **Diop** ! Nos administrateurs vérifient vos documents.
-                Vous recevrez une notification dès que vous pourrez commencer à rouler.
+            <p className="text-slate-500 text-sm leading-relaxed mb-8">
+                Ravi de vous voir, <span className="font-bold text-slate-900">{user.name}</span> !<br/>
+                L'équipe <span className="text-[#F8B803] font-bold">SamaTaxi</span> vérifie vos documents.
+                Cela prend généralement moins de 24h.
             </p>
 
-            {/* Actions de Support */}
-            <div className="space-y-4 w-full max-w-xs">
-                <a
-                    href="https://wa.me/221778435052" // Remplace par ton numéro RioFix/SamaTaxi
-                    className="flex items-center justify-center gap-2 w-full bg-green-500 text-white py-3 rounded-xl font-semibold shadow-md hover:bg-green-600 transition"
-                >
-                    <span>💬</span> Contacter le support WhatsApp
+            <div className="w-full space-y-3">
+                <a href="https://wa.me/221xxxxxx" className="block w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-lg active:scale-95 transition-transform">
+                    CONTACTER LE SUPPORT
                 </a>
-
-                <button
-                    onClick={() => window.location.reload()}
-                    className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold shadow-md hover:bg-slate-800 transition"
-                >
-                    Actualiser mon statut
+                <button onClick={() => window.location.reload()} className="block w-full py-4 bg-white border-2 border-slate-100 text-slate-400 rounded-2xl font-bold text-sm active:scale-95 transition-transform">
+                    ACTUALISER
                 </button>
             </div>
-
-            <footer className="mt-12 text-slate-400 text-sm italic">
-                SamaTaxi — La sécurité avant tout.
-            </footer>
         </div>
     );
 }

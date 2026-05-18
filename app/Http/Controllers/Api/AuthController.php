@@ -43,9 +43,9 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                // Logique de rôle robuste
-                'role' => $user->driver ? 'driver' : 'passenger',
-                'profile' => $user->driver ?? $user->passenger
+                'role' => $user->driver ? 'driver' : ($user->passenger ? 'passenger' : null),
+                'driver_data' => $user->driver, // Cette clé sera maintenant présente dès le login !
+                'passenger_data' => $user->passenger,
             ]
         ]);
     }
