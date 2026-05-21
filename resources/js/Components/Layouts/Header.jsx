@@ -26,7 +26,7 @@ const Header = ({ user, onLogout, onViewChange }) => {
                     className="flex items-center gap-2 p-1.5 pl-2 pr-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-all border border-gray-100 active:scale-95 z-[5001]"
                 >
                     <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white text-[10px] font-black border-2 border-white">
-                        {user.name.charAt(0).toUpperCase()}
+                        {user?.name?.charAt(0).toUpperCase()}
                     </div>
 
                     {/* ICON HAMBURGER / X ANIMÉE */}

@@ -17,20 +17,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // On crée un compte Admin spécifique pour toi tester
+        // 1. Compte Admin Spécifique
         User::factory()->create([
             'name' => 'Admin SamaTaxi',
             'email' => 'admin@samataxi.sn',
             'password' => bcrypt('pass123'),
         ]);
 
-        // On crée 50 chauffeurs (ce qui créera aussi 50 utilisateurs automatiquement)
+        // 2. Création des 50 chauffeurs via la factory corrigée
         Driver::factory(50)->create();
 
-        // On crée 100 passagers (ce qui créera aussi 100 users automatiquement)
+        // 3. Création des 100 passagers via leur factory
         Passenger::factory(100)->create();
 
-        // Optionnel : Créer un passager spécifique pour tes tests manuels
+        // 4. Passager Spécifique pour tes tests manuels
         $testPassenger = User::factory()->create([
             'name' => 'Client Test',
             'email' => 'client@samataxi.sn',
@@ -42,17 +42,17 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '+221770000000',
         ]);
 
-        // Optionnel : Créer un chauffeur spécifique pour tes tests manuels
+        // 5. Chauffeur Spécifique (Modou Fall) : Forcé à 'active' pour bypasser le sas d'attente
         $testDriver = User::factory()->create([
             'name' => 'Driver Test',
             'email' => 'modou.fall@samataxi.sn',
             'password' => bcrypt('password'),
         ]);
 
-        Driver::create([
+        Driver::factory()->create([
             'user_id' => $testDriver->id,
-            'phone_number' => '+221771111111',
+            'account_status' => 'active', // Assure l'accès immédiat au Radar pour tes tests
+            'status' => 'offline', // Par défaut, le chauffeur est hors ligne. Tu pourras le mettre en ligne via l'interface ou les tests.
         ]);
-
     }
 }

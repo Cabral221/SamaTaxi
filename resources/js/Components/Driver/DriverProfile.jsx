@@ -60,9 +60,10 @@ const DriverProfile = ({ user, driverData, onBack }) => {
 
         console.log("Check showToast function:", showToast);
         try {
-            await axios.post('/api/driver/profile', data, {
+            const response = await axios.post('/api/v1/driver/profile', data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
+            console.log("Profil mis à jour avec succès", response.data);
             showToast("Profil mis à jour !"); // Succès
         } catch (error) {
             if (error.response && error.response.status === 422) {

@@ -14,7 +14,7 @@ const DriverHistory = ({ onBack }) => {
         else setLoadingMore(true);
 
         try {
-            const res = await axios.get(`/api/driver/rides/history?page=${page}`);
+            const res = await axios.get(`/api/v1/driver/rides/history?page=${page}`);
 
             // Mise à jour des stats (seulement au premier chargement)
             if (page === 1) setStats(res.data.stats);
@@ -27,7 +27,7 @@ const DriverHistory = ({ onBack }) => {
             setHasMore(res.data.rides.next_page_url !== null);
         } catch (err) {
             console.error("Erreur historique chauffeur", err);
-            
+
         } finally {
             setLoading(false);
             setLoadingMore(false);

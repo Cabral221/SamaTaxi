@@ -8,6 +8,7 @@ use App\Events\RideCompleted;
 use App\Events\RideRequested;
 use App\Events\RideStarted;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\RideResource;
 use App\Models\Driver;
 use App\Models\Ride;
 use App\Services\RideService;
@@ -63,7 +64,7 @@ class RideController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Demande de course envoyée !',
-            'ride' => $ride
+            'ride' => new RideResource($ride)
         ], 201);
     }
 
@@ -86,9 +87,17 @@ class RideController extends Controller
                 ->with(['driver.user'])
                 ->first();
         }
+        // 🚨 Sécurité : Si aucune course n'est en cours, on coupe court proprement
+        if (!$ride) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucune course active.',
+                'ride' => null
+            ]);
+        }
 
         return response()->json([
-            'ride' => $ride
+            'ride' => new RideResource($ride)
         ]);
     }
 
@@ -121,10 +130,16 @@ class RideController extends Controller
             ->orderBy('distance_to_pickup')
             ->get();
 
+        $ridesResources = [];
+        foreach ($rides as $ride) {
+            // On parse les WKT pour extraire les coordonnées sans requête SQL additionnelle
+            $ridesResources[] = new RideResource($ride);
+        }
+
         return response()->json([
             'success' => true,
             'count' => $rides->count(),
-            'available_rides' => $rides // Grâce aux $appends dans Ride.php, pickup_lat et pickup_lng seront inclus ici
+            'available_rides' => $ridesResources // Grâce aux $appends dans Ride.php, pickup_lat et pickup_lng seront inclus ici
         ]);
 
     }
@@ -168,7 +183,7 @@ class RideController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Course acceptée !',
-            'ride' => $ride
+            'ride' => new RideResource($ride)
         ]);
     }
 
@@ -185,7 +200,7 @@ class RideController extends Controller
         // Diffuser l'événement pour que le client change aussi de vue
         event(new RideStarted($ride));
 
-        return response()->json(['success' => true, 'ride' => $ride]);
+        return response()->json(['success' => true, 'ride' => new RideResource($ride)]);
     }
 
     public function completeRide(Ride $ride)
@@ -215,7 +230,7 @@ class RideController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Course terminée. Merci !',
-            'ride' => $ride
+            'ride' => new RideResource($ride)
         ]);
     }
 

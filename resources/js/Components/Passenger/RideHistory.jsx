@@ -27,7 +27,7 @@ const RideHistory = ({ onBack }) => {
         else setLoadingMore(true);
 
         try {
-            const res = await axios.get(`/api/passenger/rides/history?page=${page}`);
+            const res = await axios.get(`/api/v1/passenger/rides/history?page=${page}`);
             const newRides = res.data.rides.data;
             // setRides(res.data.rides);
             if (page === 1) {

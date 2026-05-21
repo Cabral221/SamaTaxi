@@ -19,14 +19,16 @@ class DriverFactory extends Factory
      */
     public function definition(): array
     {
-        // Coordonnées approximatives de Dakar (Min/Max pour couvrir la presqu'île)
+        // Coordonnées approximatives de Dakar
         $lat = fake()->latitude(14.66, 14.76);
         $lng = fake()->longitude(-17.52, -17.42);
 
         return [
-            'user_id' => User::factory(), // Crée un User pour chaque Driver
-            'phone_number' => fake()->phoneNumber(),
-            'status' => fake()->randomElement(['available', 'busy', 'offline']),
+            'user_id' => User::factory(),
+            // numerify('########') va remplacer chaque '#' par un chiffre aléatoire
+            'phone_number' => '+2217' . fake()->numerify('########'),
+            'status' => 'offline',
+            'account_status' => fake()->randomElement(['active', 'pending']),
             'current_location' => DB::raw("ST_GeomFromText('POINT($lng $lat)', 4326)"),
         ];
     }

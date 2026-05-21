@@ -9,7 +9,7 @@ const RideCard = ({ ride, onAccept }) => {
                     <div className="relative">
                         <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-2xl shadow-lg shadow-slate-200">
                             {ride.passenger?.avatar ? (
-                                <img src={ "storage/" + ride.passenger.avatar} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
+                                <img src={ride.passenger.avatar} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
                             ) : (
                                 <span className="grayscale-0">👤</span>
                             )}

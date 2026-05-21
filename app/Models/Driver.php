@@ -15,14 +15,18 @@ class Driver extends Model
         'user_id',
         'phone_number',
         'avatar',
-        'license',
+        'account_status', // Le nouveau champ de conformité ('pending', 'active', etc.)
         'status',
+        'service_type',   // 'economy' ou 'comfort'
         'current_location',
         'lat',
         'lng',
         'vehicule_make',
         'vehicule_model',
         'vehicule_plate',
+        'license',        // Chemin du fichier permis
+        'identity_card',  // Chemin CNI
+        'vehicle_registration', // Chemin Carte Grise
     ];
 
     protected $casts = [
@@ -56,5 +60,10 @@ class Driver extends Model
     public function rides()
     {
         return $this->hasMany(Ride::class);
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->account_status === 'active';
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Http\Resources\V1\RideResource;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -22,7 +23,7 @@ class RideRequested implements ShouldBroadcast
     public function __construct($ride)
     {
         // On charge les relations pour que le chauffeur voit qui appelle
-        $this->ride = $ride->load('passenger.user');
+        $this->ride = new RideResource($ride);
     }
 
     /**

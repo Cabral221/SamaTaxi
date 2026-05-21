@@ -13,7 +13,7 @@ const Login = ({ onSuccess, onSwitch, onForgot }) => {
         setError(null);
 
         try {
-            const response = await axios.post('/api/login', {
+            const response = await axios.post('/api/v1/login', {
                 email,
                 password,
                 device_name: navigator.userAgent, // Identifie l'appareil pour le token

@@ -19,7 +19,7 @@ const Register = ({ onSuccess, onSwitch }) => {
         setErrors({});
 
         try {
-            const response = await axios.post('/api/register', {
+            const response = await axios.post('/api/v1/register', {
                 ...formData,
                 device_name: navigator.userAgent
             });

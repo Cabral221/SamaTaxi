@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Http\Resources\V1\RideResource;
 use App\Models\Ride;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -19,7 +20,7 @@ class RideStarted implements ShouldBroadcast
     public function __construct(Ride $ride)
     {
         // On charge les relations nécessaires pour que le client ait tout (driver, user, etc.)
-        $this->ride = $ride->load(['driver.user', 'passenger.user']);
+        $this->ride = new RideResource($ride);
     }
 
     public function broadcastOn(): array

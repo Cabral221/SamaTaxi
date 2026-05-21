@@ -24,5 +24,13 @@ export const Styles = {
         background: '#f1f2f6', color: '#ff4d4d', border: 'none',
         padding: '12px', borderRadius: '12px', width: '100%',
         fontWeight: 'bold', marginTop: '15px'
-    }
+    },
+    addressBox: {
+        background: '#f8f9fa', padding: '15px', borderRadius: '15px', marginBottom: '20px'
+    },
+    addressLine: { display: 'flex', alignItems: 'center', gap: '10px' },
+    dot: { width: '8px', height: '8px', borderRadius: '50%' },
+    addressText: { fontSize: '0.85em', color: '#2d3436', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+
+
 };

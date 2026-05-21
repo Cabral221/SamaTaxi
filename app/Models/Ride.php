@@ -19,6 +19,7 @@ class Ride extends Model
         'pickup_location',
         'destination_location',
         'estimated_price',
+        'final_price', 
         'distance_km',
         'cancelled_by',
         'accepted_at',

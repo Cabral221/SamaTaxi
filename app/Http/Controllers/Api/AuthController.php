@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\UserResource;
 use App\Mail\OtpMail;
 use App\Models\Driver;
 use App\Models\Passenger; // Ajouté
@@ -33,20 +34,13 @@ class AuthController extends Controller
 
         // Suppression des anciens tokens si tu veux une session unique par appareil
         // $user->tokens()->where('name', $request->device_name)->delete();
-
+        $user->load(['driver', 'passenger']);
         $token = $user->createToken($request->device_name)->plainTextToken;
 
         return response()->json([
             'success' => true,
             'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                // Logique de rôle robuste
-                'role' => $user->driver ? 'driver' : 'passenger',
-                'profile' => $user->driver ?? $user->passenger
-            ]
+            'user' => new UserResource($user),
         ]);
     }
 
@@ -89,11 +83,7 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => true,
                     'token' => $token,
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'role' => $request->role,
-                    ]
+                    'user' => new UserResource($user),
                 ], 201);
             });
         } catch (\Exception $e) {

@@ -123,7 +123,7 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining, setCurren
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontWeight: 'bold', color: '#F8B803', fontSize: '1.2em', border: '2px solid #F8B803'
                         }}>
-                            <img src={ "storage/" + ride.passenger?.avatar} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
+                            <img src={ride.passenger?.avatar} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
                         </div>
                         <div className='pl-6'>
                             <h3 style={{ margin: 0, fontSize: '1.2em', fontWeight: '800' }}>
@@ -135,6 +135,17 @@ function Navigation({ driverCoords, ride, onCancel, distanceRemaining, setCurren
                         </div>
                     </div>
                     <a href={`tel:${ride.passenger?.phone_number}`} style={{ padding: '12px', background: '#f1f2f6', borderRadius: '50%', textDecoration: 'none' }}>📞</a>
+                </div>
+
+                <div style={style.addressBox}>
+                    <div style={style.addressLine}>
+                        <div style={{...style.dot, background: '#F8B803'}} />
+                        <span style={style.addressText}>{ride.pickup_address}</span>
+                    </div>
+                    <div style={{...style.addressLine, marginTop: '8px'}}>
+                        <div style={{...style.dot, background: '#000000'}} />
+                        <span style={style.addressText}>{ride.destination_address}</span>
+                    </div>
                 </div>
 
                 {/* BOUTON D'ACTION PRINCIPAL */}

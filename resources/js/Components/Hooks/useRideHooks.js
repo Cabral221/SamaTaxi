@@ -33,7 +33,7 @@ export const useRideHooks = (ride, onExit) => {
         const heartbeat = setInterval(async () => {
             if (navigator.onLine) {
                 try {
-                    const response = await axios.get('/api/rides/current');
+                    const response = await axios.get('/api/v1/driver/rides/current');
                     // Si la course n'est plus là, on sort
                     if (!response.data.ride && ride.id) {
                         onExit('La course a été interrompue ou annulée.');
@@ -51,7 +51,7 @@ export const useRideHooks = (ride, onExit) => {
     const performAction = async (actionType) => {
         setIsLoading(true);
         try {
-            const response = await axios.post(`/api/rides/${ride.id}/${actionType}`);
+            const response = await axios.post(`/api/v1/driver/rides/${ride.id}/${actionType}`);
             if (response.data.success) {
                 if (actionType === 'start') setStatus('in_progress');
                 if (actionType === 'complete') {

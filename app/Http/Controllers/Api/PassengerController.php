@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\PassengerResource;
+use App\Http\Resources\V1\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -61,7 +63,8 @@ class PassengerController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profil mis à jour',
-            'user'    => $user->load('passenger') // On renvoie le user frais
+            'user'    => new UserResource($passenger->user), // On renvoie le user frais
+            'passenger' => new PassengerResource($passenger) // On renvoie aussi le passenger frais
         ]);
     }
 
