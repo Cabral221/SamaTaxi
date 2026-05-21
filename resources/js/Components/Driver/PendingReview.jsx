@@ -22,7 +22,7 @@ export default function PendingReview({ user }) {
             </p>
 
             <div className="w-full space-y-3">
-                <a href="https://wa.me/221xxxxxx" className="block w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-lg active:scale-95 transition-transform">
+                <a href="https://wa.me/221778435052" className="block w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-lg active:scale-95 transition-transform">
                     CONTACTER LE SUPPORT
                 </a>
                 <button onClick={() => window.location.reload()} className="block w-full py-4 bg-white border-2 border-slate-100 text-slate-400 rounded-2xl font-bold text-sm active:scale-95 transition-transform">

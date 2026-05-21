@@ -17,7 +17,7 @@ const ForgotPassword = ({ onBack }) => {
         setLoading(true);
         setErrors({});
         try {
-            const res = await axios.post('/api/password/otp', { email });
+            const res = await axios.post('/api/v1/password/otp', { email });
             if (res.data.success) {
                 setStep(2);
             }
@@ -33,7 +33,7 @@ const ForgotPassword = ({ onBack }) => {
         setLoading(true);
         setErrors({});
         try {
-            const res = await axios.post('/api/password/reset', {
+            const res = await axios.post('/api/v1/password/reset', {
                 email,
                 ...formData
             });

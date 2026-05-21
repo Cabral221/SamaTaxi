@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Ride;
 use App\Events\DriverMoved; // Ton nouvel événement
+use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\DriverResource;
+use App\Models\Ride;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -37,7 +38,7 @@ class DriverController extends Controller
         // 3. Handle License Document Upload
         if ($request->hasFile('license')) {
             $licensePath = $request->file('license')->store('drivers/licenses', 'public');
-            $driver->license = '/storage/' . $licensePath;
+            $driver->license = $licensePath;
         }
 
         // 4. Update Driver Table (les autres champs)
@@ -48,7 +49,7 @@ class DriverController extends Controller
             'vehicule_plate' => $request->vehicule_plate,
         ]);
 
-        return response()->json(['success' => true, 'driver' => $driver]);
+        return response()->json(['success' => true, 'driver' => new DriverResource($driver)]);
     }
 
     public function updateLocation(Request $request) {
@@ -72,7 +73,8 @@ class DriverController extends Controller
 
         $response = [
             'success' => true,
-            'message' => 'Position mise à jour'
+            'message' => 'Position mise à jour',
+            'driver' => new DriverResource($driver)
         ];
 
         // 2. Logique liée à la course active

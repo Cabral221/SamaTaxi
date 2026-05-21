@@ -18,7 +18,7 @@ class RideCancelled implements ShouldBroadcast
 
     public function __construct(Ride $ride, $canceledBy)
     {
-        $this->ride = $ride;
+        $this->ride = new RideResource($ride); // On utilise la ressource pour que le client ait toutes les infos formatées
         $this->canceledBy = $canceledBy;
     }
 

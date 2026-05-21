@@ -5,13 +5,11 @@ import AddressInput from '../Common/AddressInput';
 import { useToast } from '../Context/ToastContext';
 
 function OrderForm({ onOrderCreated, points, setPoints, setRideDetails, rideDetails }) {
-    // const [details, setDetails] = useState({ distance: 0, price: 0 });
-    const [price, setPrice] = useState();
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
     const getServerEstimation = async (distance, pickup) => {
         try {
-            const response = await axios.get('/api/rides/estimate', {
+            const response = await axios.get('/api/v1/rides/estimate', {
                 params: {
                     distance_km: distance / 1000,
                     lat: pickup.lat,
@@ -31,21 +29,25 @@ function OrderForm({ onOrderCreated, points, setPoints, setRideDetails, rideDeta
 
     // Calcul de l'estimation quand les deux points sont présents
     useEffect(() => {
-        if (points.pickup?.lat && points.destination?.lat) {
-            const p1 = L.latLng(points.pickup.lat, points.pickup.lng);
-            const p2 = L.latLng(points.destination.lat, points.destination.lng);
-            // 1.3 pour simuler les routes réelles au lieu du vol d'oiseau
-            const realDistance = Math.round(p1.distanceTo(p2) * 1.3);
-            getServerEstimation(realDistance, points.pickup);
-        } else {
+        // 1. Si l'un des deux points essentiels est manquant, on stoppe TOUT immédiatement
+        if (!points.pickup?.lat || !points.destination?.lat) {
             setRideDetails({ distance: 0, price: 0 });
+            return; // On sort direct, on ne cherche même pas à évaluer la suite
         }
-    }, [points.pickup?.lat, points.destination?.lat]);
+
+        // 2. Si on a les deux points, on calcule la distance et on appelle le serveur
+        const p1 = L.latLng(points.pickup.lat, points.pickup.lng);
+        const p2 = L.latLng(points.destination.lat, points.destination.lng);
+        const realDistance = Math.round(p1.distanceTo(p2) * 1.3);
+
+        getServerEstimation(realDistance, points.pickup);
+
+    }, [points.pickup?.lat, points.destination?.lat, setRideDetails]);
 
     const handleOrder = () => {
         if (rideDetails.price === 0) return;
         setLoading(true);
-        axios.post('/api/rides', {
+        axios.post('/api/v1/passenger/rides', {
             pickup_lat: points.pickup.lat,
             pickup_lng: points.pickup.lng,
             destination_lat: points.destination.lat,
@@ -84,7 +86,7 @@ function OrderForm({ onOrderCreated, points, setPoints, setRideDetails, rideDeta
                 />
             </div>
 
-            {rideDetails.price > 0 && (
+            {rideDetails.price > 0 && points.destination?.lat && (
                 <div className="flex justify-between items-center bg-gray-50 p-4 rounded-3xl border border-gray-100 animate-in zoom-in-95">
                     <div>
                         <span className="block text-[8px] text-gray-400 uppercase font-black tracking-widest">Distance</span>

@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Http\Resources\V1\RideResource;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -63,7 +64,7 @@ class RideAccepted implements ShouldBroadcast
     public function broadcastWith()
     {
         return [
-            'ride' => $this->ride->load(['driver.user', 'passenger.user']),
+            'ride' => new RideResource($this->ride), // On utilise la ressource pour tout formater correctement
             'driverPosition' => $this->driverPosition // Envoyé côte à côte
         ];
     }

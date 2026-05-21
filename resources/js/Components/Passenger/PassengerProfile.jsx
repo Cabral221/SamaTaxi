@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const PassengerProfile = ({ user, passenger, onBack }) => {
     const { showToast } = useToast();
-    const [preview, setPreview] = useState(null);
+    const [preview, setPreview] = useState(passenger.avatar); // Prévisualisation de l'avatar
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
 
@@ -35,10 +35,16 @@ const PassengerProfile = ({ user, passenger, onBack }) => {
         }
 
         try {
-            await axios.post('/api/passenger/profile',data, {
+            const response = await axios.post('/api/v1/passenger/profile', data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             showToast("Profil mis à jour !");
+            // On remet user et passenger à jour
+            user.name = response.data.user.name;
+            user.email = response.data.user.email;
+            passenger.phone_number = response.data.passenger.phone_number;
+            passenger.avatar = response.data.passenger.avatar;
+            // onBack(); // Optionnel : revenir à la vue précédente après mise à jour
         } catch (error) {
             if (error.response?.status === 422) {
                 setErrors(error.response.data.errors);
@@ -65,7 +71,7 @@ const PassengerProfile = ({ user, passenger, onBack }) => {
                         <div className="w-24 h-24 rounded-[2rem] bg-slate-100 overflow-hidden border-4 border-white shadow-xl">
                             {preview || passenger.avatar ? (
                                 <img
-                                    src={preview || `/storage/${passenger.avatar}`}
+                                    src={preview || `${passenger.avatar}`}
                                     className="w-full h-full object-cover"
                                     alt="Avatar"
                                 />

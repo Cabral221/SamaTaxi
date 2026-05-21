@@ -10,18 +10,78 @@ import { useToast } from "../Context/ToastContext";
 
 const notificationSound = new Audio('/sounds/ride_requested.wav');
 
-function Index({ user, activeView, onViewChange }) { // Récupère le user depuis AppLayout
+// Coordonnées de secours si le GPS est désactivé
+const DAKAR_FALLBACK = { address: 'Dakar, Sénégal', lat: 14.7167, lng: -17.4677 };
+
+function Index({ user, activeView, onViewChange }) {
     const { showToast } = useToast();
     const [mapKey, setMapKey] = useState(0);
     const [view, setView] = useState('HOME');
     const [currentRide, setCurrentRide] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
     const [loading, setLoading] = useState(true);
+
+    // 🔥 Correction 1 : On commence à null pour forcer l'attente du GPS
     const [points, setPoints] = useState({
-        pickup: { address: 'Localisation...', lat: 14.7167, lng: -17.4677 }, // Dakar par défaut
+        pickup: { address: 'Recherche de votre position...', lat: null, lng: null },
         destination: { address: '', lat: null, lng: null }
     });
     const [rideDetails, setRideDetails] = useState({ distance: 0, price: 0 });
+
+    // 🔥 Extraction de la requête de géolocalisation réelle pour pouvoir la re-déclencher à la demande
+    const triggerGeolocation = (isMounted = true, callback = null) => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    try {
+                        const res = await axios.get(`https://photon.komoot.io/reverse?lon=${longitude}&lat=${latitude}`);
+                        const address = res.data.features[0]?.properties.name || "Ma position";
+
+                        if (isMounted) {
+                            setPoints(prev => ({
+                                ...prev,
+                                pickup: { address, lat: latitude, lng: longitude },
+                                destination: { address: '', lat: null, lng: null } // On reset proprement la destination
+                            }));
+                            setMapKey(prev => prev + 1); // Force la carte à se caler sur la bonne position
+                        }
+                    } catch (e) {
+                        if (isMounted) {
+                            setPoints(prev => ({
+                                ...prev,
+                                pickup: { address: "Ma position", lat: latitude, lng: longitude },
+                                destination: { address: '', lat: null, lng: null }
+                            }));
+                        }
+                    } finally {
+                        if (callback) callback();
+                    }
+                },
+                (error) => {
+                    console.warn("Géolocalisation refusée ou indisponible, application du fallback Dakar.");
+                    if (isMounted) {
+                        setPoints(prev => ({
+                            ...prev,
+                            pickup: DAKAR_FALLBACK,
+                            destination: { address: '', lat: null, lng: null }
+                        }));
+                    }
+                    if (callback) callback();
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        } else {
+            if (isMounted) {
+                setPoints(prev => ({
+                    ...prev,
+                    pickup: DAKAR_FALLBACK,
+                    destination: { address: '', lat: null, lng: null }
+                }));
+            }
+            if (callback) callback();
+        }
+    };
 
     const handlePickupFromMap = (coords) => {
         setPoints(prev => ({
@@ -32,12 +92,12 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
 
     const handleNewOrder = (ride) => {
         setCurrentRide(ride);
-        setIsSearching(true); // On active l'écran d'attente
+        setIsSearching(true);
     };
 
     const handleCancelledRide = async () => {
         try {
-            const response = await axios.post(`/api/rides/${currentRide.id}/cancel`);
+            const response = await axios.post(`/api/v1/passenger/rides/${currentRide.id}/cancel`);
             if (response.data.success) {
                 setCurrentRide(null);
                 setIsSearching(false);
@@ -47,39 +107,49 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
         }
     };
 
-    // Gestion Audio
     const playNotification = () => {
         notificationSound.currentTime = 0;
         notificationSound.play().catch(e => console.warn("Lecture bloquée"));
     };
 
-    // IMPORTANT : Synchronise la vue quand on clique dans le Header
     useEffect(() => {
         if (activeView) {
             setView(activeView);
         }
     }, [activeView]);
 
-    // Géolocalisation initiale (une seule fois au montage de l'Index)
+    // 🔥 Correction 2 : Gestion propre et unifiée du cycle de vie Géolocalisation + Course active
     useEffect(() => {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const { latitude, longitude } = position.coords;
-                try {
-                    const res = await axios.get(`https://photon.komoot.io/reverse?lon=${longitude}&lat=${latitude}`);
-                    const address = res.data.features[0]?.properties.name || "Ma position";
-                    setPoints(prev => ({
-                        ...prev,
-                        pickup: { address, lat: latitude, lng: longitude }
-                    }));
-                } catch (e) {
-                    setPoints(prev => ({ ...prev, pickup: { address: "Ma position", lat: latitude, lng: longitude } }));
+        let isMounted = true;
+
+        const initPassengerData = async () => {
+            // 1. D'abord on vérifie s'il y a une course en cours
+            try {
+                const res = await axios.get('/api/v1/passenger/rides/current');
+                if (res.data.ride && isMounted) {
+                    setCurrentRide(res.data.ride);
+                    if (res.data.ride.status === 'requested') setIsSearching(true);
+                    setLoading(false);
+                    return; // Si course active, pas besoin de chercher le GPS immédiatement pour le formulaire
                 }
+            } catch (error) {
+                console.log('Impossible de vérifier la course active', error);
+            }
+
+            // 2. Si pas de course, on cherche la position GPS réelle via notre fonction externe
+            triggerGeolocation(isMounted, () => {
+                if (isMounted) setLoading(false);
             });
-        }
+        };
+
+        initPassengerData();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
-    // useEffet pour l'activation de l'audio
+    // Unlock audio
     useEffect(() => {
         const unlockAudio = () => {
             notificationSound.play().then(() => {
@@ -108,47 +178,25 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
 
         if (currentRide && !isSearching) {
             const channel = window.Echo.private(`rides.${currentRide.id}`);
-                // Ecoute la notification d'arrivée à destination du chauffeur
             channel.listen('.ride.completed', (e) => {
-                console.log("🔔 Course terminée !", e);
                 showToast("Vous êtes arrivé à destination. Merci d'avoir choisi SamaTaxi !", "success");
 
                 setTimeout(() => {
                     setCurrentRide(null);
                     setRideDetails({ distance: 0, price: 0 });
-                    setPoints({
-                        pickup: points.pickup,
+                    // Vidage de la destination pour forcer le masquage instantané du panneau de prix
+                    setPoints(prev => ({
+                        pickup: { address: 'Mise à jour de votre position...', lat: null, lng: null },
                         destination: { address: '', lat: null, lng: null }
-                    });
-                    setMapKey(prev => prev + 1);
+                    }));
+                    // 🔥 Appel de la requête de géolocalisation réelle dès que la course est clôturée
+                    triggerGeolocation(true);
                 }, 3000);
-                // C'est ici que tu "décroches" le client
             });
 
             return () => channel.stopListening('.ride.completed');
-
         }
-
     }, [currentRide, isSearching]);
-
-    // Check course active au chargement
-    useEffect(() => {
-        setLoading(true);
-        try {
-            axios.get('/api/rides/current')
-                .then(res => {
-                    // console.log("Vérification de la course active au chargement :", res.data);
-                    if (res.data.ride) {
-                        setCurrentRide(res.data.ride);
-                        if (res.data.ride.status === 'requested') setIsSearching(true);
-                    }
-                })
-                .finally(() => setLoading(false));
-        } catch (error) {
-            console.log('Impossible de vérifier la course active', error);
-            setLoading(false);
-        }
-    }, []);
 
     if (loading) return (
         <div className="h-screen w-full flex items-center justify-center bg-white">
@@ -156,22 +204,20 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
         </div>
     );
 
-    // On modifie le rendu pour intercepter la vue PROFILE
     if (view === 'PROFILE') {
         return <PassengerProfile user={user} passenger={user.passenger_data} onBack={() => {
             setView('HOME');
-            onViewChange('HOME'); // Notifie AppLayout pour remettre le scroll/état à zéro
+            onViewChange('HOME');
         }} />;
-    }else if (view === 'HISTORY') {
+    } else if (view === 'HISTORY') {
         return <RideHistory onBack={() => {
             setView('HOME');
-            onViewChange('HOME'); // Pour synchroniser avec AppLayout
+            onViewChange('HOME');
         }} />;
     }
 
     return (
         <div className="relative h-screen w-full overflow-hidden">
-            {/* 1. VUE RECHERCHE (Overlay plein écran avec animation) */}
             {isSearching && currentRide && (
                 <div className="fixed inset-0 z-[100] bg-white animate-in slide-in-from-bottom duration-500">
                     <RideSearching
@@ -181,22 +227,25 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
                 </div>
             )}
 
-            {/* 2. CONTENU PRINCIPAL */}
             <div className="mx-auto">
                 {!currentRide ? (
                     <div className="relative h-screen w-full overflow-hidden bg-slate-50">
-                        {/* LA CARTE (Prend tout l'espace en arrière-plan) */}
+                        {/* LA CARTE (Ne s'affiche que si les coordonnées de pickup existent) */}
                         <div className="absolute inset-0 z-0">
-                            <PassengerMap
-                                key={mapKey} // Permet de forcer le rechargement de la carte quand on reset les points
-                                pickup={points.pickup}
-                                destination={points.destination}
-                                onPickupChange={handlePickupFromMap} // Mise à jour quand on bouge la carte
-                                rideDetails={rideDetails}
-                            />
+                            {points.pickup.lat && (
+                                <PassengerMap
+                                    key={mapKey}
+                                    pickup={points.pickup}
+                                    destination={points.destination}
+                                    onPickupChange={handlePickupFromMap}
+                                    rideDetails={rideDetails}
+                                    onOrderCreated={handleNewOrder}
+                                    setRideDetails={setRideDetails}
+                                />
+                            )}
                         </div>
 
-                        {/* HEADER FLOTTANT (Bonjour, Nom...) */}
+                        {/* HEADER FLOTTANT */}
                         <div className="absolute top-6 left-6 right-6 z-20 pointer-events-none">
                             <div className="space-y-1 animate-in fade-in slide-in-from-top-4 duration-700">
                                 <h2 className="text-3xl font-black text-gray-900 leading-tight tracking-tighter uppercase drop-shadow-sm">
@@ -211,11 +260,9 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
                         {/* LE MARQUEUR "SUCETTE" FIXE AU CENTRE */}
                         {!points.destination.lat && (
                             <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-full z-20 pointer-events-none flex flex-col items-center">
-                                {/* Le cercle (bonbon) */}
                                 <div className="w-10 h-10 bg-[#F8B803] border-4 border-black rounded-full shadow-[0_10px_20px_rgba(0,0,0,0.3)] flex items-center justify-center animate-bounce">
                                     <div className="w-2 h-2 bg-black rounded-full"></div>
                                 </div>
-                                {/* La barre */}
                                 <div className="w-1.5 h-8 bg-black -mt-1 rounded-b-full"></div>
                             </div>
                         )}
@@ -223,7 +270,6 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
                         {/* FORMULAIRE FLOTTANT EN BAS */}
                         <div className="absolute bottom-6 left-6 right-6 z-20">
                             <div className="max-w-md mx-auto space-y-4">
-                                {/* Formulaire de commande ultra-compact */}
                                 <div className="bg-white rounded-[2.5rem] shadow-[0_22px_50px_rgba(0,0,0,0.15)] border border-gray-100 p-2 animate-in slide-in-from-bottom-8 duration-700">
                                     <OrderForm
                                         points={points}
@@ -234,7 +280,6 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
                                     />
                                 </div>
 
-                                {/* Suggestions en bas (Optionnel, tu peux les garder ou les masquer pour gagner de la place) */}
                                 <div className="grid grid-cols-2 gap-3 opacity-90 animate-in fade-in duration-1000">
                                     <button className="bg-black text-white p-4 rounded-3xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all">
                                         <span className="text-sm">🏠</span>
@@ -249,7 +294,6 @@ function Index({ user, activeView, onViewChange }) { // Récupère le user depui
                         </div>
                     </div>
                 ) : (
-                    /* 3. VUE NAVIGATION (Une fois la course acceptée) */
                     <div className="absolute inset-0 w-full animate-in zoom-in-95 duration-500">
                         <Navigation
                             ride={currentRide}

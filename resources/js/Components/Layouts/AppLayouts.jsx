@@ -27,8 +27,9 @@ function AppLayout({ children }) {
 
         const checkSession = async () => {
             try {
-                const res = await axios.get('/api/user');
-                setUser(res.data);
+                const res = await axios.get('/api/v1/user');
+                console.log("Réponse de l'API /user :", res.data.data);
+                setUser(res.data.data);
             } catch (error) {
                 setUser(null);
             } finally {
@@ -55,7 +56,7 @@ function AppLayout({ children }) {
     const handleLogout = async () => {
         try {
         // 1. Appel API pour supprimer le token en base de données
-            await axios.post('/api/logout');
+            await axios.post('/api/v1/logout');
         } catch (error) {
             console.error("Erreur lors de la déconnexion API", error);
         } finally {

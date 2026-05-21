@@ -57,7 +57,7 @@ function Radar({ user, currentView, setCurrentView }) {
                     const now = Date.now();
                     if (now - lastUpdateRef.current > 5000 && navigator.onLine) {
                         lastUpdateRef.current = now;
-                        axios.post('/api/driver/location', newPos).catch(() => {});
+                        axios.post('/api/v1/driver/location', newPos).catch(() => {});
                     }
                 },
                 (error) => {
@@ -79,7 +79,7 @@ function Radar({ user, currentView, setCurrentView }) {
     useEffect(() => {
         if (!hasUserData || isPending || !coords) return;
 
-        axios.get('/api/drivers/available-rides', { params: coords })
+        axios.get('/api/v1/driver/available-rides', { params: coords })
             .then(res => { if(res.data.success) setNewRides(res.data.available_rides); })
             .finally(() => setLoading(false));
 
@@ -105,7 +105,7 @@ function Radar({ user, currentView, setCurrentView }) {
 
         const checkActiveRide = async () => {
             try {
-                const response = await axios.get('/api/rides/current');
+                const response = await axios.get('/api/v1/driver/rides/current');
                 if (response.data.ride) {
                     setActiveRide(response.data.ride);
                 }
@@ -119,7 +119,7 @@ function Radar({ user, currentView, setCurrentView }) {
 
     const handleAccept = async (rideId) => {
         try {
-            const response = await axios.post(`/api/rides/${rideId}/accept`);
+            const response = await axios.post(`/api/v1/driver/rides/${rideId}/accept`);
             if (response.data.success) setActiveRide(response.data.ride);
         } catch (error) {
             alert("Cette course n'est plus disponible.");
